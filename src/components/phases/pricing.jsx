@@ -141,11 +141,11 @@ function FlashSaleBanner() {
    ═══════════════════════════════════════════════════ */
 function PricingHero() {
   return (
-    <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 overflow-hidden">
+    <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
         <div className="absolute inset-0 opacity-5" style={{
           backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
           backgroundSize: "32px 32px"
@@ -155,7 +155,7 @@ function PricingHero() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20 text-center">
         <h1 className="text-3xl lg:text-4xl font-extrabold text-white leading-tight max-w-3xl mx-auto">
           Increase your sales, buy cheap from{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-400">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-blue-400">
             Wholesale Deals
           </span>
         </h1>
@@ -172,7 +172,7 @@ function PricingHero() {
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <div className="flex items-center justify-center gap-1.5 mb-1">
-                <stat.icon size={16} className="text-sky-400" />
+                <stat.icon size={16} className="text-orange-400" />
                 <span className="text-xl sm:text-2xl font-extrabold text-white">{stat.value}</span>
               </div>
               <p className="text-xs text-slate-400">{stat.label}</p>
@@ -203,7 +203,7 @@ function PeriodToggle({ period, setPeriod }) {
             onClick={() => setPeriod(p.id)}
             className={`relative px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
               period === p.id
-                ? "bg-white text-sky-600 shadow-md"
+                ? "bg-white text-orange-600 shadow-md"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -230,12 +230,12 @@ function PricingCard({ tier, name, pricing, period, features, isPopular = false,
   return (
     <div className={`relative rounded-2xl overflow-hidden transition-all duration-300 ${
       isPopular
-        ? "bg-white border-2 border-sky-500 shadow-xl shadow-sky-100 scale-[1.03] z-10"
+        ? "bg-white border-2 border-orange-500 shadow-xl shadow-orange-100 scale-[1.03] z-10"
         : "bg-white border border-slate-200 shadow-sm hover:shadow-lg"
     }`}>
       {/* Popular Badge */}
       {isPopular && (
-        <div className="bg-gradient-to-r from-sky-500 to-blue-600 py-2 text-center">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-700 py-2 text-center">
           <p className="text-white text-xs font-bold flex items-center justify-center gap-1.5">
             <Flame size={12} />
             85% of customers choose this package!
@@ -247,10 +247,10 @@ function PricingCard({ tier, name, pricing, period, features, isPopular = false,
         {/* Tier Name */}
         <div className="flex items-center gap-2 mb-4">
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-            tier === "standard" ? "bg-slate-100" : tier === "premium" ? "bg-sky-100" : "bg-amber-100"
+            tier === "standard" ? "bg-slate-100" : tier === "premium" ? "bg-orange-100" : "bg-amber-100"
           }`}>
             <Icon size={18} className={
-              tier === "standard" ? "text-slate-500" : tier === "premium" ? "text-sky-500" : "text-amber-500"
+              tier === "standard" ? "text-slate-500" : tier === "premium" ? "text-orange-500" : "text-amber-500"
             } />
           </div>
           <h3 className="text-lg font-extrabold text-slate-900">{name}</h3>
@@ -275,7 +275,7 @@ function PricingCard({ tier, name, pricing, period, features, isPopular = false,
         {/* CTA */}
         <button className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${
           isPopular
-            ? "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white"
+            ? "bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white"
             : tier === "premiumPlus"
             ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
             : "bg-slate-900 hover:bg-slate-800 text-white"
@@ -294,15 +294,15 @@ function PricingCard({ tier, name, pricing, period, features, isPopular = false,
                   isPremPlus
                     ? "bg-amber-100"
                     : isAdvanced
-                    ? "bg-sky-100"
+                    ? "bg-orange-100"
                     : "bg-emerald-100"
                 }`}>
                   <Check size={11} className={
-                    isPremPlus ? "text-amber-600" : isAdvanced ? "text-sky-600" : "text-emerald-600"
+                    isPremPlus ? "text-amber-600" : isAdvanced ? "text-orange-600" : "text-emerald-600"
                   } />
                 </div>
                 <span className={`text-sm leading-snug ${
-                  isPremPlus ? "text-amber-700 font-medium" : isAdvanced ? "text-sky-700 font-medium" : "text-slate-600"
+                  isPremPlus ? "text-amber-700 font-medium" : isAdvanced ? "text-orange-700 font-medium" : "text-slate-600"
                 }`}>
                   {feature}
                 </span>
@@ -342,9 +342,9 @@ function SellerCTA() {
    ═══════════════════════════════════════════════════ */
 function StatsSection() {
   return (
-    <div className="relative bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-2xl overflow-hidden">
+    <div className="relative bg-gradient-to-r from-slate-900 via-slate-900 to-slate-900 rounded-2xl overflow-hidden">
       <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-0 left-0 w-64 h-64 bg-sky-400 rounded-full -translate-y-1/2 -translate-x-1/4 blur-3xl" />
+        <div className="absolute top-0 left-0 w-64 h-64 bg-orange-400 rounded-full -translate-y-1/2 -translate-x-1/4 blur-3xl" />
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-blue-400 rounded-full translate-y-1/2 translate-x-1/4 blur-3xl" />
       </div>
       <div className="relative px-8 py-10 text-center">
@@ -355,7 +355,7 @@ function StatsSection() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {[
             { icon: Flame, value: "366.61%", label: "Average markup of wholesale prices", color: "text-orange-400" },
-            { icon: Package, value: "14,891+", label: "Active Deals as of today", color: "text-sky-400" },
+            { icon: Package, value: "14,891+", label: "Active Deals as of today", color: "text-orange-400" },
             { icon: Users, value: "300+", label: "New Suppliers in the past 7 days", color: "text-emerald-400" },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center">
@@ -409,7 +409,7 @@ function TestimonialsCarousel() {
             className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30 transition-all">
             <ChevronRight size={18} />
           </button>
-          <a href="/testimonials" className="flex items-center gap-1 text-sm font-semibold text-sky-500 hover:text-sky-600 transition-colors ml-2">
+          <a href="/testimonials" className="flex items-center gap-1 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors ml-2">
             All Testimonials <ArrowRight size={14} />
           </a>
         </div>
@@ -427,7 +427,7 @@ function TestimonialsCarousel() {
               "{t.text}"
             </p>
             <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-bold text-xs">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-xs">
                 {t.author.split(" ").map((n) => n[0]).join("")}
               </div>
               <div>
@@ -455,7 +455,7 @@ function FAQSection() {
           <h2 className="text-2xl font-extrabold text-slate-900">Frequently Asked Questions</h2>
           <p className="text-sm text-slate-500 mt-1">Have questions? We're here to help.</p>
         </div>
-        <a href="/help" className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+        <a href="/help" className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
           <HelpCircle size={14} />
           Help Center
         </a>
@@ -466,7 +466,7 @@ function FAQSection() {
           <div
             key={i}
             className={`rounded-xl border transition-all ${
-              openIndex === i ? "border-sky-200 bg-sky-50/50 shadow-sm" : "border-slate-200 bg-white"
+              openIndex === i ? "border-orange-200 bg-orange-50/50 shadow-sm" : "border-slate-200 bg-white"
             }`}
           >
             <button
@@ -474,14 +474,14 @@ function FAQSection() {
               className="w-full flex items-start gap-3 px-5 py-4 text-left"
             >
               <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                openIndex === i ? "bg-sky-500" : "bg-slate-100"
+                openIndex === i ? "bg-orange-500" : "bg-slate-100"
               }`}>
                 <ChevronDown size={13} className={`transition-transform ${
                   openIndex === i ? "rotate-180 text-white" : "text-slate-400"
                 }`} />
               </div>
               <h3 className={`text-sm font-semibold transition-colors ${
-                openIndex === i ? "text-sky-700" : "text-slate-800"
+                openIndex === i ? "text-orange-700" : "text-slate-800"
               }`}>
                 {faq.q}
               </h3>
@@ -513,17 +513,17 @@ export default function Phase6PricingPage() {
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
               <Tag size={14} className="text-white" />
             </div>
             <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-sky-500">Up</span>
+              Wholesale<span className="text-orange-500">Up</span>
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/" className="text-xs text-slate-500 hover:text-sky-500 font-medium">Home</a>
-            <a href="/categories" className="text-xs text-slate-500 hover:text-sky-500 font-medium">Categories</a>
-            <a href="/account" className="text-xs text-slate-500 hover:text-sky-500 font-medium">Account</a>
+            <a href="/" className="text-xs text-slate-500 hover:text-orange-500 font-medium">Home</a>
+            <a href="/categories" className="text-xs text-slate-500 hover:text-orange-500 font-medium">Categories</a>
+            <a href="/account" className="text-xs text-slate-500 hover:text-orange-500 font-medium">Account</a>
           </div>
         </div>
       </div>

@@ -172,13 +172,13 @@ function SupplierCard({ supplier, isPremium = false }) {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-sky-200 transition-all duration-300">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all duration-300">
       {/* Header */}
       <div className="p-5 pb-0">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <a href={`/supplier/${supplier.id}`} className="group">
-              <h3 className="text-base font-bold text-slate-900 group-hover:text-sky-600 transition-colors">
+              <h3 className="text-base font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
                 {supplier.name}
               </h3>
             </a>
@@ -198,11 +198,11 @@ function SupplierCard({ supplier, isPremium = false }) {
           </div>
           {/* Action Buttons */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <button className="px-3 py-2 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors flex items-center gap-1.5">
+            <button className="px-3 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-1.5">
               <Phone size={12} />
               <span className="hidden sm:inline">Call Now</span>
             </button>
-            <button className="px-3 py-2 text-xs font-semibold text-white bg-sky-500 hover:bg-sky-600 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+            <button className="px-3 py-2 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
               <Send size={12} />
               <span className="hidden sm:inline">Send Enquiry</span>
             </button>
@@ -221,7 +221,7 @@ function SupplierCard({ supplier, isPremium = false }) {
           {supplier.description.length > 180 && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="text-xs text-sky-500 hover:text-sky-600 font-semibold mt-1"
+              className="text-xs text-orange-500 hover:text-orange-600 font-semibold mt-1"
             >
               {expanded ? "Show less" : "Read more..."}
             </button>
@@ -257,7 +257,7 @@ function SupplierCard({ supplier, isPremium = false }) {
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <BlurredText text={supplier.email} isPremium={isPremium} className="text-sm text-sky-600 font-medium truncate" />
+                <BlurredText text={supplier.email} isPremium={isPremium} className="text-sm text-orange-600 font-medium truncate" />
               </div>
               <button className="text-[10px] text-red-400 hover:text-red-500 mt-0.5">Report Invalid Details</button>
             </div>
@@ -286,7 +286,7 @@ function SupplierCard({ supplier, isPremium = false }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Website</p>
-                <a href="#" className="text-sm text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1 mt-0.5">
+                <a href="#" className="text-sm text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1 mt-0.5">
                   {supplier.website}
                   <ExternalLink size={11} />
                 </a>
@@ -298,12 +298,12 @@ function SupplierCard({ supplier, isPremium = false }) {
 
         {/* Free Tier CTA */}
         {!isPremium && (
-          <div className="mt-4 px-4 py-3 bg-gradient-to-r from-sky-50 to-blue-50 rounded-xl border border-sky-100 flex items-center justify-between gap-3">
+          <div className="mt-4 px-4 py-3 bg-gradient-to-r from-orange-50 to-orange-50 rounded-xl border border-orange-100 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Lock size={14} className="text-sky-500" />
+              <Lock size={14} className="text-orange-500" />
               <span className="text-xs text-slate-600 font-medium">Join to see full supplier details</span>
             </div>
-            <a href="/pricing" className="px-4 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-lg shadow-sm hover:from-sky-600 hover:to-blue-700 transition-all">
+            <a href="/pricing" className="px-4 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg shadow-sm hover:from-orange-600 hover:to-orange-800 transition-all">
               Join Now!
             </a>
           </div>
@@ -338,7 +338,7 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
         {/* Category Tags */}
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           {supplier.categories.slice(0, 3).map((cat) => (
-            <a key={cat} href="#" className="px-2 py-1 text-[10px] font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-md transition-colors">
+            <a key={cat} href="#" className="px-2 py-1 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-md transition-colors">
               {cat}
             </a>
           ))}
@@ -375,7 +375,7 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Website:</span>
             {isPremium ? (
-              <a href="#" className="text-sky-600 hover:text-sky-700 font-medium flex items-center gap-1">
+              <a href="#" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
                 {supplier.website} <ExternalLink size={10} />
               </a>
             ) : (
@@ -403,7 +403,7 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
           </div>
         </div>
         {!isPremium && (
-          <button className="w-full mt-3 px-3 py-2 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors flex items-center justify-center gap-1.5">
+          <button className="w-full mt-3 px-3 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center gap-1.5">
             <Eye size={12} />
             Show Details
           </button>
@@ -442,12 +442,12 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
       <div className="px-5 py-4 space-y-2">
         {isPremium ? (
           <>
-            <button className="w-full py-2.5 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1.5">
+            <button className="w-full py-2.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1.5">
               <Send size={13} />
               Send Enquiry
             </button>
             <div className="flex gap-2">
-              <a href={`/supplier/${supplier.id}`} className="flex-1 py-2 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors text-center">
+              <a href={`/supplier/${supplier.id}`} className="flex-1 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors text-center">
                 View Profile
               </a>
               <a href="#" className="flex-1 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-center">
@@ -458,7 +458,7 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
         ) : (
           <a
             href="/pricing"
-            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 rounded-xl transition-all shadow-sm"
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 rounded-xl transition-all shadow-sm"
           >
             <Lock size={14} />
             Join Now
@@ -511,13 +511,13 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-6 py-3 text-sm font-semibold transition-all relative ${
                   activeTab === tab.id
-                    ? "text-sky-600"
+                    ? "text-orange-600"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-500 rounded-full" />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500 rounded-full" />
                 )}
               </button>
             ))}
@@ -535,7 +535,7 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                 {/* Products Distributed */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                    <Package size={13} className="text-sky-500" />
+                    <Package size={13} className="text-orange-500" />
                     Products Distributed by This Supplier
                   </h3>
                   <p className="text-sm text-slate-600">{supplier.products}</p>
@@ -544,7 +544,7 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                 {/* Brands */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                    <Tag size={13} className="text-sky-500" />
+                    <Tag size={13} className="text-orange-500" />
                     Brands Distributed by This Supplier
                   </h3>
                   {supplier.brands.length > 0 ? (
@@ -563,12 +563,12 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                 {/* Focus */}
                 <div>
                   <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-sky-500" />
+                    <Sparkles size={13} className="text-orange-500" />
                     Focus
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {supplier.focus.map((f) => (
-                      <span key={f} className="px-3 py-1.5 text-xs font-semibold text-sky-600 bg-sky-50 rounded-lg border border-sky-100">
+                      <span key={f} className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 rounded-lg border border-orange-100">
                         {f}
                       </span>
                     ))}
@@ -608,7 +608,7 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                 <div className="space-y-4">
                   {REVIEWS.map((review) => (
                     <div key={review.id} className="flex gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {review.initial}
                       </div>
                       <div className="flex-1">
@@ -650,11 +650,11 @@ export default function Phase4Suppliers() {
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
               <Tag size={14} className="text-white" />
             </div>
             <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-sky-500">Up</span>
+              Wholesale<span className="text-orange-500">Up</span>
             </span>
           </div>
           <span className="text-xs text-slate-400">Phase 4 — Supplier Cards & Profile</span>
@@ -665,7 +665,7 @@ export default function Phase4Suppliers() {
         {/* Controls */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <Building2 size={16} className="text-sky-500" />
+            <Building2 size={16} className="text-orange-500" />
             Interactive Controls
           </h2>
           <div className="flex flex-wrap gap-3 mb-3">
@@ -681,7 +681,7 @@ export default function Phase4Suppliers() {
             <button
               onClick={() => setCurrentView("listing")}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                currentView === "listing" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"
+                currentView === "listing" ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600"
               }`}
             >
               Suppliers Listing
@@ -689,7 +689,7 @@ export default function Phase4Suppliers() {
             <button
               onClick={() => setCurrentView("profile")}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                currentView === "profile" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"
+                currentView === "profile" ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600"
               }`}
             >
               Single Supplier Profile
@@ -697,7 +697,7 @@ export default function Phase4Suppliers() {
             <button
               onClick={() => setCurrentView("panel")}
               className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                currentView === "panel" ? "bg-sky-100 text-sky-700" : "bg-slate-100 text-slate-600"
+                currentView === "panel" ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600"
               }`}
             >
               Contact Panel Only
@@ -747,7 +747,7 @@ export default function Phase4Suppliers() {
           <div>
             {/* Breadcrumb */}
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-4">
-              <a href="#" className="hover:text-sky-500 transition-colors">Suppliers</a>
+              <a href="#" className="hover:text-orange-500 transition-colors">Suppliers</a>
               <ChevronRight size={12} />
               <span className="text-slate-700 font-medium">{selectedSupplier.name}</span>
             </div>
@@ -760,7 +760,7 @@ export default function Phase4Suppliers() {
                   onClick={() => setSelectedSupplier(s)}
                   className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                     selectedSupplier.id === s.id
-                      ? "bg-sky-500 text-white shadow-sm"
+                      ? "bg-orange-500 text-white shadow-sm"
                       : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >

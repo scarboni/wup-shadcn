@@ -126,7 +126,7 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
         <div className={`relative pt-5 pb-10 text-center ${
           user.gender === "male"
             ? "bg-gradient-to-br from-indigo-500 to-violet-600"
-            : "bg-gradient-to-br from-sky-500 to-blue-600"
+            : "bg-gradient-to-br from-orange-500 to-orange-700"
         }`}>
           <div className="absolute inset-0 opacity-20" style={{
             backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
@@ -136,7 +136,7 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
         <div className="px-5 pb-4 -mt-8 relative">
           <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mx-auto">
             <div className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-lg ${
-              user.gender === "male" ? "bg-indigo-500" : "bg-sky-500"
+              user.gender === "male" ? "bg-indigo-500" : "bg-orange-500"
             }`}>
               {user.initials}
             </div>
@@ -164,7 +164,7 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
               <span className="font-semibold text-slate-700">{user.pin}</span>
             </div>
           </div>
-          <a href="/pricing" className="block mt-3 w-full py-2.5 text-center text-xs font-bold text-sky-600 border border-sky-200 hover:bg-sky-50 rounded-lg transition-colors">
+          <a href="/pricing" className="block mt-3 w-full py-2.5 text-center text-xs font-bold text-orange-600 border border-orange-200 hover:bg-orange-50 rounded-lg transition-colors">
             Renew Account
           </a>
         </div>
@@ -185,11 +185,11 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
                   key={item.id}
                   className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
                     isActive
-                      ? "text-sky-600 bg-sky-50 font-semibold border-r-2 border-sky-500"
-                      : "text-slate-600 hover:text-sky-600 hover:bg-slate-50"
+                      ? "text-orange-600 bg-orange-50 font-semibold border-r-2 border-orange-500"
+                      : "text-slate-600 hover:text-orange-600 hover:bg-slate-50"
                   }`}
                 >
-                  <item.icon size={16} className={isActive ? "text-sky-500" : "text-slate-400"} />
+                  <item.icon size={16} className={isActive ? "text-orange-500" : "text-slate-400"} />
                   <span className="flex-1">{item.label}</span>
                   {item.badge && (
                     <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -213,7 +213,7 @@ function UpgradeBanner({ user }) {
   if (user.tier === "PREMIUM") return null;
 
   return (
-    <div className="relative bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 rounded-xl overflow-hidden shadow-lg mb-6">
+    <div className="relative bg-gradient-to-r from-orange-600 via-orange-700 to-indigo-600 rounded-xl overflow-hidden shadow-lg mb-6">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/4" />
@@ -226,12 +226,12 @@ function UpgradeBanner({ user }) {
           </div>
           <div>
             <p className="text-2xl font-extrabold text-white">49,100</p>
-            <p className="text-sky-100 text-sm">Wholesalers, Liquidators, & Dropshippers</p>
+            <p className="text-orange-100 text-sm">Wholesalers, Liquidators, & Dropshippers</p>
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs text-sky-200 mb-1.5">Not yet Subscribed?</p>
-          <a href="/pricing" className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-sky-600 font-bold text-sm rounded-lg hover:bg-sky-50 transition-colors shadow-sm">
+          <p className="text-xs text-orange-200 mb-1.5">Not yet Subscribed?</p>
+          <a href="/pricing" className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-orange-600 font-bold text-sm rounded-lg hover:bg-orange-50 transition-colors shadow-sm">
             Upgrade Now!
             <ArrowRight size={14} />
           </a>
@@ -292,7 +292,7 @@ function FormInput({ label, required, error, type = "text", placeholder, value, 
         className={`w-full px-3.5 py-2.5 text-sm rounded-lg border transition-all outline-none ${
           error
             ? "border-red-300 bg-red-50 text-red-800 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+            : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
         } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
       />
       {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
@@ -316,7 +316,7 @@ function FormSelect({ label, required, options, value, onChange, error, classNam
           className={`w-full px-3.5 py-2.5 text-sm rounded-lg border appearance-none cursor-pointer transition-all outline-none pr-9 ${
             error
               ? "border-red-300 bg-red-50 text-red-800"
-              : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
           }`}
         >
           {options.map((opt) => (
@@ -368,7 +368,7 @@ function PhoneInput({ label, required, phoneCode, setPhoneCode, value, onChange,
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:border-sky-300 outline-none"
+                    className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:border-orange-300 outline-none"
                     autoFocus
                   />
                 </div>
@@ -378,8 +378,8 @@ function PhoneInput({ label, required, phoneCode, setPhoneCode, value, onChange,
                   <button
                     key={`${c.country}-${c.code}`}
                     onClick={() => { setPhoneCode(c); dd.setOpen(false); setSearch(""); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-sky-50 transition-colors ${
-                      phoneCode.code === c.code && phoneCode.country === c.country ? "bg-sky-50 text-sky-700" : "text-slate-600"
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-orange-50 transition-colors ${
+                      phoneCode.code === c.code && phoneCode.country === c.country ? "bg-orange-50 text-orange-700" : "text-slate-600"
                     }`}
                   >
                     <span className="text-sm">{c.flag}</span>
@@ -400,7 +400,7 @@ function PhoneInput({ label, required, phoneCode, setPhoneCode, value, onChange,
           className={`flex-1 px-3.5 py-2.5 text-sm rounded-lg border transition-all outline-none ${
             error
               ? "border-red-300 bg-red-50"
-              : "border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              : "border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
           }`}
         />
       </div>
@@ -429,11 +429,11 @@ function LanguageSelector({ selected, setSelected }) {
       </label>
       <div ref={dd.ref} className="relative">
         <div
-          className="min-h-[42px] px-2.5 py-1.5 border border-slate-200 rounded-lg bg-slate-50 focus-within:bg-white focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-100 transition-all cursor-text flex flex-wrap gap-1.5"
+          className="min-h-[42px] px-2.5 py-1.5 border border-slate-200 rounded-lg bg-slate-50 focus-within:bg-white focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 transition-all cursor-text flex flex-wrap gap-1.5"
           onClick={() => dd.setOpen(true)}
         >
           {selected.map((lang) => (
-            <span key={lang} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-sky-100 text-sky-700 rounded-md">
+            <span key={lang} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded-md">
               {lang}
               <button onClick={(e) => { e.stopPropagation(); remove(lang); }} className="hover:text-sky-900">
                 <X size={10} />
@@ -455,7 +455,7 @@ function LanguageSelector({ selected, setSelected }) {
               <button
                 key={lang}
                 onClick={() => add(lang)}
-                className="w-full text-left px-3.5 py-2 text-sm text-slate-600 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                className="w-full text-left px-3.5 py-2 text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-700 transition-colors"
               >
                 {lang}
               </button>
@@ -479,7 +479,7 @@ function FormSection({ title, icon: Icon, children }) {
   return (
     <div className="pt-6 first:pt-0">
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-        {Icon && <Icon size={16} className="text-sky-500" />}
+        {Icon && <Icon size={16} className="text-orange-500" />}
         <h2 className="text-sm font-bold text-slate-800">{title}</h2>
       </div>
       {children}
@@ -556,7 +556,7 @@ function AccountProfileForm({ showErrors }) {
         </p>
         <p className="text-sm text-slate-500 mt-1">
           For any questions or assistance, please{" "}
-          <a href="#" className="text-sky-500 hover:text-sky-600 font-semibold">
+          <a href="#" className="text-orange-500 hover:text-orange-600 font-semibold">
             contact our dedicated support team.
           </a>
         </p>
@@ -574,9 +574,9 @@ function AccountProfileForm({ showErrors }) {
                 type="text"
                 value={form.username}
                 onChange={(e) => update("username", e.target.value)}
-                className="w-full px-3.5 py-2.5 pr-20 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+                className="w-full px-3.5 py-2.5 pr-20 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
               />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-sky-600 hover:bg-sky-50 rounded-md transition-colors">
+              <button className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-orange-600 hover:bg-orange-50 rounded-md transition-colors">
                 <Pencil size={10} />
                 Change Username
               </button>
@@ -591,13 +591,13 @@ function AccountProfileForm({ showErrors }) {
                 type={showPassword ? "text" : "password"}
                 value={form.password}
                 onChange={(e) => update("password", e.target.value)}
-                className="w-full px-3.5 py-2.5 pr-32 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+                className="w-full px-3.5 py-2.5 pr-32 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 <button onClick={() => setShowPassword(!showPassword)} className="p-1 hover:bg-slate-100 rounded transition-colors">
                   {showPassword ? <EyeOff size={13} className="text-slate-400" /> : <Eye size={13} className="text-slate-400" />}
                 </button>
-                <button className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-sky-600 hover:bg-sky-50 rounded-md transition-colors">
+                <button className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-orange-600 hover:bg-orange-50 rounded-md transition-colors">
                   <Pencil size={10} />
                   Change Password
                 </button>
@@ -630,7 +630,7 @@ function AccountProfileForm({ showErrors }) {
               value={form.roleInCompany}
               onChange={(e) => { if (e.target.value.length <= 2000) { update("roleInCompany", e.target.value); setCharCount(e.target.value.length); } }}
               rows={3}
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all resize-none"
+              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-none"
             />
             <p className="text-[10px] text-slate-400 text-right mt-0.5">{charCount}/2000 char.</p>
           </div>
@@ -663,7 +663,7 @@ function AccountProfileForm({ showErrors }) {
           {/* Newsletter Toggle */}
           <label className="flex items-center gap-3 cursor-pointer pt-2">
             <div
-              className={`relative w-10 h-5.5 rounded-full transition-colors cursor-pointer ${form.newsletter ? "bg-sky-500" : "bg-slate-200"}`}
+              className={`relative w-10 h-5.5 rounded-full transition-colors cursor-pointer ${form.newsletter ? "bg-orange-500" : "bg-slate-200"}`}
               onClick={() => update("newsletter", !form.newsletter)}
               style={{ height: "22px" }}
             >
@@ -678,7 +678,7 @@ function AccountProfileForm({ showErrors }) {
       <div className="pt-6 pb-2 flex items-center gap-3">
         <button
           onClick={handleSave}
-          className="px-8 py-3 bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2"
+          className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2"
         >
           {saved ? <Check size={16} /> : <Shield size={16} />}
           {saved ? "Saved!" : "Update Contact Details"}
@@ -709,11 +709,11 @@ export default function Phase5AccountDashboard() {
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
               <Tag size={14} className="text-white" />
             </div>
             <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-sky-500">Up</span>
+              Wholesale<span className="text-orange-500">Up</span>
             </span>
           </div>
           <span className="text-xs text-slate-400">Phase 5 — Account Dashboard</span>
@@ -724,7 +724,7 @@ export default function Phase5AccountDashboard() {
         {/* Controls */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
           <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <LayoutDashboard size={16} className="text-sky-500" />
+            <LayoutDashboard size={16} className="text-orange-500" />
             Interactive Controls
           </h2>
           <div className="flex flex-wrap gap-3 mb-3">

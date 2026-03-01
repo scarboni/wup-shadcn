@@ -95,12 +95,12 @@ function LockedSection({
 
   if (variant === "replace") {
     return (
-      <div className="py-4 text-center bg-gradient-to-r from-sky-50 to-blue-50 rounded-xl border border-sky-100">
-        <Lock size={16} className="text-sky-400 mx-auto mb-1.5" />
-        <p className="text-xs text-sky-600 font-semibold mb-2">{message}</p>
+      <div className="py-4 text-center bg-gradient-to-r from-orange-50 to-orange-50 rounded-xl border border-orange-100">
+        <Lock size={16} className="text-orange-400 mx-auto mb-1.5" />
+        <p className="text-xs text-orange-600 font-semibold mb-2">{message}</p>
         <button
           onClick={onCTA}
-          className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all"
+          className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg hover:from-orange-600 hover:to-orange-800 transition-all"
         >
           {ctaText}
         </button>
@@ -116,11 +116,11 @@ function LockedSection({
         </div>
         <div className="absolute inset-0 flex items-center justify-center bg-white/30 backdrop-blur-[2px] rounded-xl">
           <div className="text-center">
-            <Lock size={20} className="text-sky-400 mx-auto mb-2" />
+            <Lock size={20} className="text-orange-400 mx-auto mb-2" />
             <p className="text-sm text-slate-700 font-semibold mb-2">{message}</p>
             <button
               onClick={onCTA}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all shadow-lg shadow-sky-200"
+              className="px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg hover:from-orange-600 hover:to-orange-800 transition-all shadow-lg shadow-orange-200"
             >
               {ctaText}
             </button>
@@ -134,8 +134,8 @@ function LockedSection({
   return (
     <div>
       {children}
-      <div className="mt-3 py-2.5 text-center bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-100">
-        <p className="text-xs text-sky-600 font-semibold flex items-center justify-center gap-1">
+      <div className="mt-3 py-2.5 text-center bg-gradient-to-r from-orange-50 to-orange-50 rounded-lg border border-orange-100">
+        <p className="text-xs text-orange-600 font-semibold flex items-center justify-center gap-1">
           <Lock size={11} /> {message}
         </p>
       </div>
@@ -163,8 +163,8 @@ function PremiumGate({
         </div>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 max-w-sm text-center">
-            <div className="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center mx-auto mb-4">
-              <Lock size={24} className="text-sky-500" />
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center mx-auto mb-4">
+              <Lock size={24} className="text-orange-500" />
             </div>
             <h3 className="text-lg font-extrabold text-slate-900 mb-2">
               Sign in Required
@@ -176,7 +176,7 @@ function PremiumGate({
               <button className="px-5 py-2.5 text-sm font-bold text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                 Log In
               </button>
-              <button className="px-5 py-2.5 text-sm font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-xl transition-colors">
+              <button className="px-5 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors">
                 Join Free
               </button>
             </div>
@@ -195,7 +195,7 @@ function PremiumGate({
         {!showModal && (
           <div className="fixed bottom-0 inset-x-0 z-40">
             <div className="max-w-4xl mx-auto px-4 pb-4">
-              <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-2xl shadow-2xl shadow-black/30 p-4 flex items-center gap-4">
+              <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-900 rounded-2xl shadow-2xl shadow-black/30 p-4 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
                   <Crown size={20} className="text-amber-400" />
                 </div>
@@ -253,14 +253,14 @@ function UpgradeModal({ onClose }) {
       {/* Modal */}
       <div className="relative w-full max-w-lg mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200">
         {/* Top decoration */}
-        <div className="relative bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 px-8 pt-8 pb-16">
+        <div className="relative bg-gradient-to-br from-orange-500 via-orange-700 to-indigo-700 px-8 pt-8 pb-16">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
           >
             <X size={16} />
           </button>
-          <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-sky-400/20 rounded-full blur-2xl" />
+          <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-orange-400/20 rounded-full blur-2xl" />
           <div className="absolute -top-8 -left-8 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl" />
 
           <div className="relative text-center">
@@ -270,7 +270,7 @@ function UpgradeModal({ onClose }) {
             <h2 className="text-2xl font-extrabold text-white">
               Unlock Full Access
             </h2>
-            <p className="text-sky-100 text-sm mt-2 max-w-xs mx-auto">
+            <p className="text-orange-100 text-sm mt-2 max-w-xs mx-auto">
               Upgrade to a Premium Membership to access supplier contact
               details, send unlimited inquiries, and more.
             </p>
@@ -285,7 +285,7 @@ function UpgradeModal({ onClose }) {
                 {
                   icon: BadgeCheck,
                   text: "47,400+ EU, UK, USA Verified Wholesalers",
-                  color: "text-sky-500 bg-sky-100",
+                  color: "text-orange-500 bg-orange-100",
                 },
                 {
                   icon: Phone,
@@ -305,7 +305,7 @@ function UpgradeModal({ onClose }) {
                 {
                   icon: Globe,
                   text: "Web's Largest Dropshippers Databases",
-                  color: "text-blue-500 bg-blue-100",
+                  color: "text-orange-500 bg-orange-100",
                 },
                 {
                   icon: Shield,
@@ -331,13 +331,13 @@ function UpgradeModal({ onClose }) {
           </div>
 
           {/* CTA */}
-          <button className="w-full mt-5 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-sky-200 flex items-center justify-center gap-2">
+          <button className="w-full mt-5 py-3.5 bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2">
             <Crown size={16} /> Upgrade Now
           </button>
 
           <p className="text-center text-xs text-slate-400 mt-3">
             Already a premium member?{" "}
-            <a href="#" className="text-sky-500 hover:text-sky-600 font-semibold">
+            <a href="#" className="text-orange-500 hover:text-orange-600 font-semibold">
               Log in.
             </a>
           </p>
@@ -367,13 +367,13 @@ function CTASwitch({
 
   const variantClasses = {
     primary: isPremium
-      ? "bg-sky-500 hover:bg-sky-600 text-white"
-      : "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white",
+      ? "bg-orange-500 hover:bg-orange-600 text-white"
+      : "bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white",
     secondary: isPremium
       ? "bg-emerald-500 hover:bg-emerald-600 text-white"
       : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white",
     outline: isPremium
-      ? "border border-sky-200 text-sky-600 hover:bg-sky-50"
+      ? "border border-orange-200 text-orange-600 hover:bg-orange-50"
       : "border border-slate-200 text-slate-600 hover:bg-slate-50",
   };
 
@@ -400,10 +400,10 @@ function GatedSupplierCard({ onUpgrade }) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <a href="#" className="text-sm font-bold text-sky-600 hover:text-sky-700">
+          <a href="#" className="text-sm font-bold text-orange-600 hover:text-orange-700">
             Trainers and Sportswear Supplier
           </a>
-          <BadgeCheck size={14} className="text-sky-500" />
+          <BadgeCheck size={14} className="text-orange-500" />
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-lg">🇬🇧</span>
@@ -418,14 +418,14 @@ function GatedSupplierCard({ onUpgrade }) {
 
       {/* Action Buttons */}
       <div className="flex gap-2 mb-3">
-        <button className="px-3 py-1.5 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 flex items-center gap-1">
+        <button className="px-3 py-1.5 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center gap-1">
           <Phone size={11} /> Call Now
         </button>
         <button
           className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1 ${
             isPremium
-              ? "text-white bg-sky-500 hover:bg-sky-600"
-              : "text-white bg-sky-400 opacity-60 cursor-not-allowed"
+              ? "text-white bg-orange-500 hover:bg-orange-600"
+              : "text-white bg-orange-400 opacity-60 cursor-not-allowed"
           }`}
           title={!isPremium ? "Premium required to send enquiries" : ""}
         >
@@ -468,7 +468,7 @@ function GatedSupplierCard({ onUpgrade }) {
             Email
           </span>
           <BlurredContent fallback="wholesaletrain@gmail.com">
-            <a href="mailto:wholesaletrain@gmail.com" className="text-xs text-sky-600 hover:text-sky-700">
+            <a href="mailto:wholesaletrain@gmail.com" className="text-xs text-orange-600 hover:text-orange-700">
               wholesaletrain@gmail.com
             </a>
           </BlurredContent>
@@ -489,7 +489,7 @@ function GatedSupplierCard({ onUpgrade }) {
               <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
                 Website
               </span>
-              <a href="#" className="text-xs text-sky-600 hover:text-sky-700 flex items-center gap-1">
+              <a href="#" className="text-xs text-orange-600 hover:text-orange-700 flex items-center gap-1">
                 Visit website <ExternalLink size={10} />
               </a>
             </div>
@@ -526,10 +526,10 @@ function GatedDealCard({ onUpgrade }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group">
       <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <Package size={48} className="text-slate-200 group-hover:text-sky-200 transition-colors" />
+        <Package size={48} className="text-slate-200 group-hover:text-orange-200 transition-colors" />
         <div className="absolute top-2 right-2 text-lg">🇬🇧</div>
-        <div className="absolute top-2 left-2 px-2 py-1 bg-sky-600 text-white text-xs font-bold rounded-lg">
-          £18.95<span className="text-sky-200 text-[10px] ml-1">ex.VAT</span>
+        <div className="absolute top-2 left-2 px-2 py-1 bg-orange-600 text-white text-xs font-bold rounded-lg">
+          £18.95<span className="text-orange-200 text-[10px] ml-1">ex.VAT</span>
         </div>
         <button className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-sm">
           <Heart size={13} className="text-slate-400 hover:text-red-500" />
@@ -584,7 +584,7 @@ function GatedContactPanel({ onUpgrade }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">
       <div className="flex items-center gap-2 mb-3">
-        <BadgeCheck size={16} className="text-sky-500" />
+        <BadgeCheck size={16} className="text-orange-500" />
         <span className="text-xs font-bold text-emerald-600">Verified Seller</span>
       </div>
 
@@ -595,7 +595,7 @@ function GatedContactPanel({ onUpgrade }) {
       {/* Category Tags */}
       <div className="flex flex-wrap gap-1.5 mb-4">
         {["Computer & Software", "Electrical & Lighting", "Telephony & Mobile"].map((cat) => (
-          <span key={cat} className="px-2 py-1 text-[10px] font-medium text-sky-600 bg-sky-50 rounded-lg border border-sky-100">
+          <span key={cat} className="px-2 py-1 text-[10px] font-medium text-orange-600 bg-orange-50 rounded-lg border border-orange-100">
             {cat}
           </span>
         ))}
@@ -627,7 +627,7 @@ function GatedContactPanel({ onUpgrade }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-slate-400 w-16">Website:</span>
-                <a href="#" className="text-xs text-sky-600 flex items-center gap-1">
+                <a href="#" className="text-xs text-orange-600 flex items-center gap-1">
                   sitename.com <ExternalLink size={9} />
                 </a>
               </div>
@@ -715,14 +715,14 @@ function GatedContactPanel({ onUpgrade }) {
       <div className="space-y-2">
         {isPremium ? (
           <>
-            <button className="w-full py-2.5 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+            <button className="w-full py-2.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center justify-center gap-1.5">
               <Send size={13} /> Send Enquiry
             </button>
             <div className="grid grid-cols-2 gap-2">
-              <button className="py-2 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+              <button className="py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
                 View Profile
               </button>
-              <button className="py-2 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+              <button className="py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
                 View All Deals
               </button>
             </div>
@@ -730,7 +730,7 @@ function GatedContactPanel({ onUpgrade }) {
         ) : (
           <button
             onClick={onUpgrade}
-            className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 rounded-xl transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 rounded-xl transition-all flex items-center justify-center gap-1.5"
           >
             <Lock size={13} /> Join Now
           </button>
@@ -747,15 +747,15 @@ function GatingPatternCard({ title, description, icon: Icon, tier, children }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-lg bg-sky-100 flex items-center justify-center">
-          <Icon size={14} className="text-sky-500" />
+        <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
+          <Icon size={14} className="text-orange-500" />
         </div>
         <div className="flex-1">
           <h3 className="text-xs font-bold text-slate-800">{title}</h3>
           <p className="text-[10px] text-slate-500">{description}</p>
         </div>
         <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${
-          tier === "premium" ? "bg-amber-100 text-amber-700" : tier === "auth" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
+          tier === "premium" ? "bg-amber-100 text-amber-700" : tier === "auth" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-600"
         }`}>
           {tier === "premium" ? "PREMIUM" : tier === "auth" ? "AUTH" : "ALL"}
         </span>
@@ -781,11 +781,11 @@ export default function Phase8GatingLogic() {
         <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
                 <Tag size={14} className="text-white" />
               </div>
               <span className="text-base font-extrabold text-slate-900 tracking-tight">
-                Wholesale<span className="text-sky-500">Up</span>
+                Wholesale<span className="text-orange-500">Up</span>
               </span>
             </div>
 
@@ -816,7 +816,7 @@ export default function Phase8GatingLogic() {
 
               <button
                 onClick={() => setShowUpgradeModal(true)}
-                className="px-3 py-1.5 text-xs font-bold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors"
+                className="px-3 py-1.5 text-xs font-bold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
               >
                 Show Upgrade Modal
               </button>
@@ -828,8 +828,8 @@ export default function Phase8GatingLogic() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center shrink-0">
-                <Shield size={20} className="text-sky-500" />
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                <Shield size={20} className="text-orange-500" />
               </div>
               <div>
                 <h2 className="text-base font-extrabold text-slate-800">
@@ -845,7 +845,7 @@ export default function Phase8GatingLogic() {
                     tier === "guest"
                       ? "bg-slate-100 text-slate-600"
                       : tier === "free"
-                      ? "bg-blue-100 text-blue-700"
+                      ? "bg-orange-100 text-orange-800"
                       : "bg-amber-100 text-amber-700"
                   }`}>
                     {tier === "guest" && <><Lock size={11} /> Not logged in</>}
@@ -880,7 +880,7 @@ export default function Phase8GatingLogic() {
                 <div className="flex items-center justify-between py-2 border-b border-slate-100">
                   <span className="text-xs text-slate-500 font-bold">Email</span>
                   <BlurredContent fallback="wholesale@supplier.com">
-                    <span className="text-sm font-medium text-sky-600">wholesale@supplier.com</span>
+                    <span className="text-sm font-medium text-orange-600">wholesale@supplier.com</span>
                   </BlurredContent>
                 </div>
                 <div className="flex items-center justify-between py-2">

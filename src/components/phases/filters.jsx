@@ -106,7 +106,7 @@ function FilterSection({ title, defaultOpen = true, onClear, children }) {
                 e.stopPropagation();
                 onClear();
               }}
-              className="text-[10px] text-sky-500 hover:text-sky-600 font-semibold cursor-pointer"
+              className="text-[10px] text-orange-500 hover:text-orange-600 font-semibold cursor-pointer"
             >
               Clear
             </span>
@@ -160,7 +160,7 @@ function CheckboxItem({ id, label, count, checked, onChange, prefix }) {
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className="w-4 h-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400 focus:ring-offset-0 cursor-pointer"
+        className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400 focus:ring-offset-0 cursor-pointer"
       />
       {prefix && <span className="text-base shrink-0">{prefix}</span>}
       <span className="text-sm text-slate-600 group-hover:text-slate-900 flex-1 truncate">
@@ -209,7 +209,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 bg-slate-50">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal size={16} className="text-sky-500" />
+          <SlidersHorizontal size={16} className="text-orange-500" />
           <span className="text-sm font-bold text-slate-800">Filters</span>
         </div>
         <div className="flex items-center gap-2">
@@ -226,7 +226,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
                 keyword: "",
               })
             }
-            className="text-xs text-sky-500 hover:text-sky-600 font-semibold"
+            className="text-xs text-orange-500 hover:text-orange-600 font-semibold"
           >
             Clear All
           </button>
@@ -249,8 +249,8 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
                 onClick={() => setFilters((p) => ({ ...p, keyword: term }))}
                 className={`px-2.5 py-1.5 text-xs rounded-lg border transition-all ${
                   filters.keyword === term
-                    ? "bg-sky-500 text-white border-sky-500 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-sky-300 hover:text-sky-600"
+                    ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:text-orange-600"
                 }`}
               >
                 {term}
@@ -270,7 +270,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
                 key={r.value}
                 className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all ${
                   filters.rating === r.value
-                    ? "bg-sky-50 border border-sky-200"
+                    ? "bg-orange-50 border border-orange-200"
                     : "hover:bg-slate-50 border border-transparent"
                 }`}
               >
@@ -284,7 +284,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
                       rating: p.rating === r.value ? null : r.value,
                     }))
                   }
-                  className="w-3.5 h-3.5 text-sky-500 focus:ring-sky-400 focus:ring-offset-0"
+                  className="w-3.5 h-3.5 text-orange-500 focus:ring-orange-400 focus:ring-offset-0"
                 />
                 <StarRating rating={r.value} />
                 <span className="text-xs text-slate-500 font-medium">
@@ -314,7 +314,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
               value={categorySearch}
               onChange={(e) => setCategorySearch(e.target.value)}
               placeholder="Search categories..."
-              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-sky-300 focus:ring-1 focus:ring-sky-100 outline-none transition-all"
+              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all"
             />
           </div>
           <div className="space-y-0.5 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
@@ -342,7 +342,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
                   setFilters((p) => ({ ...p, priceMin: e.target.value }))
                 }
                 placeholder="Min."
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-sky-300 focus:ring-1 focus:ring-sky-100 outline-none transition-all tabular-nums"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
               />
             </div>
             <Minus size={14} className="text-slate-300 shrink-0" />
@@ -354,7 +354,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
                   setFilters((p) => ({ ...p, priceMax: e.target.value }))
                 }
                 placeholder="Max."
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-sky-300 focus:ring-1 focus:ring-sky-100 outline-none transition-all tabular-nums"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
               />
             </div>
           </div>
@@ -379,7 +379,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
               value={countrySearch}
               onChange={(e) => setCountrySearch(e.target.value)}
               placeholder="Search countries..."
-              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-sky-300 focus:ring-1 focus:ring-sky-100 outline-none transition-all"
+              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all"
             />
           </div>
           <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
@@ -402,7 +402,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
           <label className="flex items-center gap-2.5 cursor-pointer">
             <div
               className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                filters.dropshipping ? "bg-sky-500" : "bg-slate-200"
+                filters.dropshipping ? "bg-orange-500" : "bg-slate-200"
               }`}
               onClick={() =>
                 setFilters((p) => ({ ...p, dropshipping: !p.dropshipping }))
@@ -441,7 +441,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
         </FilterSection>
 
         {/* ── Promo Info Block ── */}
-        <div className="px-4 py-4 bg-gradient-to-b from-sky-50 to-white border-t border-slate-100">
+        <div className="px-4 py-4 bg-gradient-to-b from-orange-50 to-white border-t border-slate-100">
           <h4 className="text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
             <Flame size={12} className="text-orange-500" />
             Exclusive Deals on Clothing & Fashion
@@ -538,7 +538,7 @@ function ActiveFilterChips({ filters, setFilters }) {
     keyword: "bg-violet-100 text-violet-700 border-violet-200",
     rating: "bg-amber-50 text-amber-700 border-amber-200",
     category: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    country: "bg-sky-50 text-sky-700 border-sky-200",
+    country: "bg-orange-50 text-orange-700 border-orange-200",
     grade: "bg-orange-50 text-orange-700 border-orange-200",
     dropshipping: "bg-indigo-50 text-indigo-700 border-indigo-200",
   };
@@ -638,7 +638,7 @@ function SearchToolbar({
               onClick={() => setSearchMode(mode.toLowerCase())}
               className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                 searchMode === mode.toLowerCase()
-                  ? "bg-white text-sky-600 shadow-sm"
+                  ? "bg-white text-orange-600 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -658,7 +658,7 @@ function SearchToolbar({
             value={inlineSearch}
             onChange={(e) => setInlineSearch(e.target.value)}
             placeholder="Search within results..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
           />
         </div>
 
@@ -700,7 +700,7 @@ function SearchToolbar({
                   }}
                   className={`w-full text-left px-3.5 py-2 text-xs transition-colors ${
                     sortBy === opt.value
-                      ? "bg-sky-50 text-sky-700 font-semibold"
+                      ? "bg-orange-50 text-orange-700 font-semibold"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
@@ -747,7 +747,7 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
               setPerPage(Number(e.target.value));
               setPage(1);
             }}
-            className="px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white text-slate-600 focus:border-sky-300 outline-none cursor-pointer"
+            className="px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white text-slate-600 focus:border-orange-300 outline-none cursor-pointer"
           >
             {[9, 18, 27, 36].map((n) => (
               <option key={n} value={n}>
@@ -786,7 +786,7 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
               onClick={() => setPage(pageNum)}
               className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
                 page === pageNum
-                  ? "bg-sky-500 text-white shadow-sm"
+                  ? "bg-orange-500 text-white shadow-sm"
                   : "border border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -812,7 +812,7 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
             onChange={(e) => setGoToPage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGoTo()}
             placeholder="Page"
-            className="w-14 px-2 py-1.5 text-xs border border-slate-200 rounded-lg text-center tabular-nums focus:border-sky-300 focus:ring-1 focus:ring-sky-100 outline-none"
+            className="w-14 px-2 py-1.5 text-xs border border-slate-200 rounded-lg text-center tabular-nums focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none"
           />
         </div>
       </div>
@@ -843,13 +843,13 @@ function TrendingBanner() {
    ═══════════════════════════════════════════════════ */
 function PlaceholderDealCard({ index }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-sky-200 transition-all group">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-orange-200 transition-all group">
       <div className="aspect-square bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
         <Tag size={32} className="text-slate-200" />
       </div>
       <div className="p-3.5">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-lg font-bold text-sky-600">£18.95</span>
+          <span className="text-lg font-bold text-orange-600">£18.95</span>
           <span className="text-[10px] text-slate-400">ex.VAT</span>
         </div>
         <div className="h-2.5 bg-slate-100 rounded-full w-3/4 mb-1.5" />
@@ -907,11 +907,11 @@ export default function Phase2FilterSidebar() {
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
               <Tag size={14} className="text-white" />
             </div>
             <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-sky-500">Up</span>
+              Wholesale<span className="text-orange-500">Up</span>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -919,7 +919,7 @@ export default function Phase2FilterSidebar() {
               onClick={() => setViewMode("deals")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 viewMode === "deals"
-                  ? "bg-sky-100 text-sky-700"
+                  ? "bg-orange-100 text-orange-700"
                   : "text-slate-500 hover:bg-slate-100"
               }`}
             >
@@ -929,7 +929,7 @@ export default function Phase2FilterSidebar() {
               onClick={() => setViewMode("suppliers")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
                 viewMode === "suppliers"
-                  ? "bg-sky-100 text-sky-700"
+                  ? "bg-orange-100 text-orange-700"
                   : "text-slate-500 hover:bg-slate-100"
               }`}
             >
@@ -943,8 +943,8 @@ export default function Phase2FilterSidebar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Phase Info Banner */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-sky-100 flex items-center justify-center shrink-0">
-            <SlidersHorizontal size={18} className="text-sky-500" />
+          <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+            <SlidersHorizontal size={18} className="text-orange-500" />
           </div>
           <div className="flex-1">
             <h2 className="text-sm font-bold text-slate-800">
@@ -955,7 +955,7 @@ export default function Phase2FilterSidebar() {
               chips appear, change sort order, toggle mobile filter view, and
               navigate pages.
               {activeFilterCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 font-bold">
+                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">
                   {activeFilterCount} active filter
                   {activeFilterCount !== 1 && "s"}
                 </span>
@@ -1016,7 +1016,7 @@ export default function Phase2FilterSidebar() {
                 Array.from({ length: 3 }, (_, i) => (
                   <div
                     key={i}
-                    className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-sky-200 transition-all"
+                    className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-orange-200 transition-all"
                   >
                     <div className="flex items-start gap-4">
                       <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
@@ -1042,10 +1042,10 @@ export default function Phase2FilterSidebar() {
                         <div className="h-2.5 bg-slate-100 rounded-full w-3/4 mb-1.5" />
                         <div className="h-2.5 bg-slate-100 rounded-full w-1/2" />
                         <div className="flex gap-2 mt-3">
-                          <button className="px-3 py-1.5 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors">
+                          <button className="px-3 py-1.5 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
                             Call Now
                           </button>
-                          <button className="px-3 py-1.5 text-xs font-semibold text-white bg-sky-500 rounded-lg hover:bg-sky-600 transition-colors">
+                          <button className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors">
                             Send Enquiry
                           </button>
                         </div>

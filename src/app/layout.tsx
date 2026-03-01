@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import AppLayout from "@/components/shared/app-layout";
 
 export const metadata: Metadata = {
   title: "WholesaleUp — Component Library",
-  description: "Next.js component library for the WholesaleUp wholesale marketplace",
+  description:
+    "Next.js component library for the WholesaleUp wholesale marketplace",
 };
 
 export default function RootLayout({
@@ -13,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <AppLayout>{children}</AppLayout>
+      </body>
     </html>
   );
 }

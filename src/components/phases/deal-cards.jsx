@@ -203,7 +203,7 @@ function SimpleDealCard({ product, isPremium = false }) {
   return (
     <a
       href={`/deal/${product.id}`}
-      className="block bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-sky-200 transition-all duration-300 group w-[260px] shrink-0 snap-start"
+      className="block bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all duration-300 group w-[260px] shrink-0 snap-start"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -236,7 +236,7 @@ function SimpleDealCard({ product, isPremium = false }) {
         </button>
         {/* Price Badge */}
         <div className="absolute bottom-2.5 left-2.5 bg-white/95 backdrop-blur-sm rounded-lg px-2.5 py-1.5 shadow-sm">
-          <span className="text-lg font-extrabold text-sky-600">{product.currency}{product.price.toFixed(2)}</span>
+          <span className="text-lg font-extrabold text-orange-600">{product.currency}{product.price.toFixed(2)}</span>
           <span className="text-[10px] text-slate-400 ml-1">ex.VAT</span>
         </div>
       </div>
@@ -247,15 +247,15 @@ function SimpleDealCard({ product, isPremium = false }) {
           <Clock size={10} />
           Deal First Featured On: {product.dateAdded}
         </p>
-        <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-sky-600 transition-colors min-h-[2.5rem]">
+        <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-orange-600 transition-colors min-h-[2.5rem]">
           {product.title}
         </h3>
         <div className="mt-3">
           <button
             className={`w-full py-2 rounded-lg text-xs font-bold transition-all ${
               isPremium
-                ? "bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
-                : "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-sm"
+                ? "bg-orange-500 hover:bg-orange-600 text-white shadow-sm"
+                : "bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white shadow-sm"
             }`}
           >
             {isPremium ? "View Deal" : "Join Now"}
@@ -278,7 +278,7 @@ function DetailedDealCard({ product, isPremium = false }) {
       className={`bg-white rounded-xl border overflow-hidden transition-all duration-300 group ${
         product.isExpired
           ? "border-slate-200 opacity-75 hover:opacity-100"
-          : "border-slate-200 hover:shadow-lg hover:border-sky-200"
+          : "border-slate-200 hover:shadow-lg hover:border-orange-200"
       }`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -347,7 +347,7 @@ function DetailedDealCard({ product, isPremium = false }) {
         {/* Price Row */}
         <div className="flex items-baseline justify-between mb-1.5">
           <div>
-            <span className="text-xl font-extrabold text-sky-600">
+            <span className="text-xl font-extrabold text-orange-600">
               {product.currency}{product.price.toFixed(2)}
             </span>
             <span className="text-xs text-slate-400 ml-1">ex.VAT</span>
@@ -368,7 +368,7 @@ function DetailedDealCard({ product, isPremium = false }) {
 
         {/* Title */}
         <a href={`/deal/${product.id}`}>
-          <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 hover:text-sky-600 transition-colors min-h-[2.5rem]">
+          <h3 className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2 hover:text-orange-600 transition-colors min-h-[2.5rem]">
             {product.title}
           </h3>
         </a>
@@ -420,14 +420,14 @@ function DetailedDealCard({ product, isPremium = false }) {
           ) : isPremium ? (
             <a
               href={`/deal/${product.id}`}
-              className="block w-full py-2.5 rounded-lg text-xs font-bold text-center bg-sky-500 hover:bg-sky-600 text-white shadow-sm transition-all"
+              className="block w-full py-2.5 rounded-lg text-xs font-bold text-center bg-orange-500 hover:bg-orange-600 text-white shadow-sm transition-all"
             >
               View Full Details
             </a>
           ) : (
             <a
               href="/pricing"
-              className="block w-full py-2.5 rounded-lg text-xs font-bold text-center bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-sm transition-all flex items-center justify-center gap-1.5"
+              className="block w-full py-2.5 rounded-lg text-xs font-bold text-center bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white shadow-sm transition-all flex items-center justify-center gap-1.5"
             >
               <Lock size={12} />
               Join Now
@@ -446,7 +446,7 @@ function CompactDealRow({ product, isPremium = false }) {
   const [faved, setFaved] = useState(false);
 
   return (
-    <div className={`bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-sky-200 transition-all ${product.isExpired ? "opacity-70 hover:opacity-100" : ""}`}>
+    <div className={`bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md hover:border-orange-200 transition-all ${product.isExpired ? "opacity-70 hover:opacity-100" : ""}`}>
       <div className="flex items-stretch">
         {/* Image */}
         <a href={`/deal/${product.id}`} className="relative w-40 sm:w-48 shrink-0 bg-slate-50 overflow-hidden">
@@ -475,7 +475,7 @@ function CompactDealRow({ product, isPremium = false }) {
                   {FLAGS[product.country]} {product.countryName}
                 </p>
                 <a href={`/deal/${product.id}`}>
-                  <h3 className="text-sm font-semibold text-slate-800 line-clamp-1 hover:text-sky-600 transition-colors">
+                  <h3 className="text-sm font-semibold text-slate-800 line-clamp-1 hover:text-orange-600 transition-colors">
                     {product.title}
                   </h3>
                 </a>
@@ -487,7 +487,7 @@ function CompactDealRow({ product, isPremium = false }) {
 
             {/* Price + Markup */}
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-lg font-extrabold text-sky-600">
+              <span className="text-lg font-extrabold text-orange-600">
                 {product.currency}{product.price.toFixed(2)}
               </span>
               <span className="text-[10px] text-slate-400">ex.VAT</span>
@@ -522,11 +522,11 @@ function CompactDealRow({ product, isPremium = false }) {
             {product.isExpired ? (
               <span className="px-4 py-1.5 text-xs font-semibold text-slate-400 bg-slate-100 rounded-lg">Expired</span>
             ) : isPremium ? (
-              <a href={`/deal/${product.id}`} className="px-4 py-1.5 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-lg transition-colors shadow-sm">
+              <a href={`/deal/${product.id}`} className="px-4 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors shadow-sm">
                 View Details
               </a>
             ) : (
-              <a href="/pricing" className="px-4 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-lg shadow-sm flex items-center gap-1">
+              <a href="/pricing" className="px-4 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg shadow-sm flex items-center gap-1">
                 <Lock size={10} /> Join Now
               </a>
             )}
@@ -571,7 +571,7 @@ function DealCarousel({ title, subtitle, products, isPremium }) {
       <div className="flex items-end justify-between mb-4">
         <div>
           {subtitle && (
-            <p className="text-xs font-bold text-sky-500 uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
+            <p className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
               <Flame size={12} className="text-orange-500" />
               {subtitle}
             </p>
@@ -593,7 +593,7 @@ function DealCarousel({ title, subtitle, products, isPremium }) {
           >
             <ChevronRight size={18} />
           </button>
-          <a href="/deals" className="hidden sm:flex items-center gap-1 text-sm font-semibold text-sky-500 hover:text-sky-600 transition-colors ml-2">
+          <a href="/deals" className="hidden sm:flex items-center gap-1 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors ml-2">
             View all
             <ArrowRight size={14} />
           </a>
@@ -623,7 +623,7 @@ function ViewToggle({ view, setView }) {
       <button
         onClick={() => setView("grid")}
         className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-          view === "grid" ? "bg-white text-sky-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+          view === "grid" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
         }`}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -637,7 +637,7 @@ function ViewToggle({ view, setView }) {
       <button
         onClick={() => setView("list")}
         className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${
-          view === "list" ? "bg-white text-sky-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+          view === "list" ? "bg-white text-orange-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
         }`}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -667,11 +667,11 @@ export default function Phase3DealCards() {
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
               <Tag size={14} className="text-white" />
             </div>
             <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-sky-500">Up</span>
+              Wholesale<span className="text-orange-500">Up</span>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -684,7 +684,7 @@ export default function Phase3DealCards() {
         {/* ── Controls Panel ── */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <Package size={16} className="text-sky-500" />
+            <Package size={16} className="text-orange-500" />
             Interactive Controls
           </h2>
           <div className="flex flex-wrap gap-3">
@@ -745,7 +745,7 @@ export default function Phase3DealCards() {
                 Get instant access to the latest and most popular wholesale and drop-ship opportunities.
               </p>
             </div>
-            <a href="/deals" className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-sky-500 hover:text-sky-600 transition-colors">
+            <a href="/deals" className="hidden sm:flex items-center gap-1.5 text-sm font-semibold text-orange-500 hover:text-orange-600 transition-colors">
               Explore Products
               <ArrowRight size={14} />
             </a>
@@ -810,7 +810,7 @@ export default function Phase3DealCards() {
               <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400">
                 <ChevronLeft size={14} />
               </button>
-              <button className="w-8 h-8 rounded-lg bg-sky-500 text-white text-xs font-bold shadow-sm">1</button>
+              <button className="w-8 h-8 rounded-lg bg-orange-500 text-white text-xs font-bold shadow-sm">1</button>
               <button className="w-8 h-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">2</button>
               <button className="w-8 h-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">3</button>
               <button className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50">
@@ -827,7 +827,7 @@ export default function Phase3DealCards() {
             {/* Simple */}
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Sparkles size={12} className="text-sky-400" />
+                <Sparkles size={12} className="text-orange-400" />
                 Simple (Carousel)
               </p>
               <SimpleDealCard product={PRODUCTS[0]} isPremium={isPremium} />

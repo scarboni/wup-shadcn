@@ -45,10 +45,10 @@ const CATEGORIES = [
   { name: "Jewellery & Watches", icon: Watch, color: "from-violet-500 to-purple-500", count: 378 },
   { name: "Health & Beauty", icon: Sparkles, color: "from-emerald-500 to-teal-500", count: 789 },
   { name: "Floral & Garden", icon: Flower2, color: "from-green-500 to-emerald-500", count: 189 },
-  { name: "Toys & Games", icon: Gamepad2, color: "from-blue-500 to-indigo-500", count: 498 },
+  { name: "Toys & Games", icon: Gamepad2, color: "from-orange-500 to-indigo-500", count: 498 },
   { name: "Computer & Software", icon: Monitor, color: "from-slate-600 to-slate-800", count: 634 },
   { name: "Gifts & Giftware", icon: Gift, color: "from-red-500 to-pink-500", count: 456 },
-  { name: "Travel & Outdoors", icon: Compass, color: "from-cyan-500 to-sky-500", count: 321 },
+  { name: "Travel & Outdoors", icon: Compass, color: "from-cyan-500 to-orange-500", count: 321 },
 ];
 
 const SIMPLE_DEALS = [
@@ -138,17 +138,17 @@ function HeroSection() {
   const supplierTypes = ["Wholesalers", "Distributors", "Liquidators", "Dropshippers"];
 
   return (
-    <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 overflow-hidden">
+    <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
       <div className="absolute inset-0">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-sky-500/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
         <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
       </div>
 
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 text-center">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight">
           WholesaleUp — 20+ Years<br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-400">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-blue-400">
             #1 Wholesale & Dropship Platform
           </span>
         </h1>
@@ -170,7 +170,7 @@ function HeroSection() {
                   <div className="absolute left-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-20 min-w-[160px]">
                     {["Deals", "Suppliers"].map((t) => (
                       <button key={t} onClick={() => { setSearchType(t); setSearchOpen(false); }}
-                        className={`w-full text-left px-3.5 py-2 text-sm transition-colors ${searchType === t ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-600 hover:bg-slate-50"}`}>
+                        className={`w-full text-left px-3.5 py-2 text-sm transition-colors ${searchType === t ? "bg-orange-50 text-orange-700 font-semibold" : "text-slate-600 hover:bg-slate-50"}`}>
                         {t}
                       </button>
                     ))}
@@ -183,7 +183,7 @@ function HeroSection() {
                 <div className="hidden sm:flex items-center gap-1">
                   {supplierTypes.map((st) => (
                     <button key={st} onClick={() => setSupplierType(st)}
-                      className={`px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all ${supplierType === st ? "bg-sky-100 text-sky-700" : "text-slate-400 hover:text-slate-600"}`}>
+                      className={`px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all ${supplierType === st ? "bg-orange-100 text-orange-700" : "text-slate-400 hover:text-slate-600"}`}>
                       {st}
                     </button>
                   ))}
@@ -194,7 +194,7 @@ function HeroSection() {
               <input type="text" placeholder={searchType === "Deals" ? "Search wholesale deals..." : "Search suppliers..."} className="flex-1 px-3 py-3 text-sm text-slate-800 bg-transparent outline-none placeholder:text-slate-400 min-w-0" />
 
               {/* Search Button */}
-              <button className="px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0">
+              <button className="px-5 py-3 bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white text-sm font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0">
                 <Search size={16} />
                 <span className="hidden sm:inline">Search</span>
               </button>
@@ -205,7 +205,7 @@ function HeroSection() {
           <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
             <span className="text-xs text-slate-500">Popular:</span>
             {["Wholesale Pajamas", "Leather Boots", "Sneaker", "Buy Toys Bulk"].map((term) => (
-              <button key={term} className="px-2.5 py-1 text-xs text-slate-400 hover:text-white border border-slate-600 hover:border-sky-400 rounded-lg transition-all">
+              <button key={term} className="px-2.5 py-1 text-xs text-slate-400 hover:text-white border border-slate-600 hover:border-orange-400 rounded-lg transition-all">
                 {term}
               </button>
             ))}
@@ -231,21 +231,21 @@ function LatestDealsCarousel() {
         <div className="flex items-center gap-2">
           <button onClick={() => scroll(-1)} disabled={!canLeft} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronLeft size={16} /></button>
           <button onClick={() => scroll(1)} disabled={!canRight} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={16} /></button>
-          <a href="/deals" className="text-sm font-semibold text-sky-500 hover:text-sky-600 flex items-center gap-1 ml-2">View all <ArrowRight size={13} /></a>
+          <a href="/deals" className="text-sm font-semibold text-orange-500 hover:text-orange-600 flex items-center gap-1 ml-2">View all <ArrowRight size={13} /></a>
         </div>
       </div>
       <div ref={scrollRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2" style={{ scrollbarWidth: "none" }}>
         {SIMPLE_DEALS.map((deal, i) => (
-          <div key={i} className="w-[220px] shrink-0 snap-start bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-sky-200 transition-all group cursor-pointer">
+          <div key={i} className="w-[220px] shrink-0 snap-start bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all group cursor-pointer">
             <div className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-              <Package size={40} className="text-slate-200 group-hover:text-sky-200 transition-colors" />
-              <div className="absolute top-2 left-2 px-2 py-1 bg-sky-600 text-white text-xs font-bold rounded-lg">£{deal.price}<span className="text-sky-200 text-[10px] ml-1">ex.VAT</span></div>
+              <Package size={40} className="text-slate-200 group-hover:text-orange-200 transition-colors" />
+              <div className="absolute top-2 left-2 px-2 py-1 bg-orange-600 text-white text-xs font-bold rounded-lg">£{deal.price}<span className="text-orange-200 text-[10px] ml-1">ex.VAT</span></div>
               <button className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-sm"><Heart size={13} className="text-slate-400 hover:text-red-500" /></button>
             </div>
             <div className="p-3">
               <p className="text-[10px] text-slate-400 mb-1">Deal Featured On: {deal.date}</p>
               <h3 className="text-xs font-semibold text-slate-800 line-clamp-2 leading-snug mb-2.5">{deal.title}</h3>
-              <button className="w-full py-2 text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all">Join Now</button>
+              <button className="w-full py-2 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg hover:from-orange-600 hover:to-orange-800 transition-all">Join Now</button>
             </div>
           </div>
         ))}
@@ -266,7 +266,7 @@ function CategoriesGrid() {
         <div className="flex items-center gap-2">
           <button onClick={() => scroll(-1)} disabled={!canLeft} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronLeft size={16} /></button>
           <button onClick={() => scroll(1)} disabled={!canRight} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={16} /></button>
-          <a href="/categories" className="text-sm font-semibold text-sky-500 hover:text-sky-600 flex items-center gap-1 ml-2">View all <ArrowRight size={13} /></a>
+          <a href="/categories" className="text-sm font-semibold text-orange-500 hover:text-orange-600 flex items-center gap-1 ml-2">View all <ArrowRight size={13} /></a>
         </div>
       </div>
       <div ref={scrollRef} className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2" style={{ scrollbarWidth: "none" }}>
@@ -275,7 +275,7 @@ function CategoriesGrid() {
             <div className={`w-full aspect-square rounded-2xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-2.5 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all`}>
               <cat.icon size={36} className="text-white/90" />
             </div>
-            <p className="text-xs font-semibold text-slate-700 group-hover:text-sky-600 transition-colors">{cat.name}</p>
+            <p className="text-xs font-semibold text-slate-700 group-hover:text-orange-600 transition-colors">{cat.name}</p>
           </button>
         ))}
       </div>
@@ -289,17 +289,17 @@ function CategoriesGrid() {
 function TrustSectionBuyers() {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 rounded-3xl overflow-hidden">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl overflow-hidden">
         <div className="grid lg:grid-cols-2 gap-8 p-8 lg:p-12">
           <div>
-            <span className="text-xs font-bold text-sky-400 uppercase tracking-wider">#1 Platform On the Market</span>
+            <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">#1 Platform On the Market</span>
             <h2 className="text-2xl lg:text-3xl font-extrabold text-white mt-2 leading-snug">
               Discover Why Thousands of Resellers Continue to Put Their Trust in Us
             </h2>
             <p className="text-slate-400 mt-3 text-sm leading-relaxed">
               We're more than just a platform — we're a growth partner. From day-one beginners to seasoned resellers, we provide the tools, insights, and supplier access that empower you to scale faster & smarter.
             </p>
-            <button className="mt-5 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-1.5">
+            <button className="mt-5 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-colors flex items-center gap-1.5">
               Learn More <ArrowRight size={14} />
             </button>
           </div>
@@ -310,8 +310,8 @@ function TrustSectionBuyers() {
               { icon: ThumbsUp, title: "Satisfaction Guarantee", desc: "We guarantee to find what you're looking for, or your money back." },
             ].map((item) => (
               <div key={item.title} className="flex items-start gap-3.5 bg-white/5 rounded-xl p-4">
-                <div className="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
-                  <item.icon size={18} className="text-sky-400" />
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+                  <item.icon size={18} className="text-orange-400" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">{item.title}</h3>
@@ -339,22 +339,22 @@ function HotOffersCarousel({ isPremium }) {
           <h2 className="text-xl font-extrabold text-slate-900 mt-0.5">Hot Wholesale & Dropship Offers</h2>
           <p className="text-sm text-slate-500 mt-1">Get instant access to the latest and most popular wholesale and drop-ship opportunities.</p>
         </div>
-        <a href="/deals" className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-sky-600 border border-sky-200 rounded-xl hover:bg-sky-50 transition-colors shrink-0">
+        <a href="/deals" className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-xl hover:bg-orange-50 transition-colors shrink-0">
           Explore Products <ArrowRight size={14} />
         </a>
       </div>
       <div className="relative">
         <div ref={scrollRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2" style={{ scrollbarWidth: "none" }}>
           {DETAILED_DEALS.map((deal, i) => (
-            <div key={i} className="w-[280px] shrink-0 snap-start bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-sky-200 transition-all group">
+            <div key={i} className="w-[280px] shrink-0 snap-start bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all group">
               <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-                <Package size={48} className="text-slate-200 group-hover:text-sky-200 transition-colors" />
+                <Package size={48} className="text-slate-200 group-hover:text-orange-200 transition-colors" />
                 <div className="absolute top-2 right-2 text-lg">{deal.country}</div>
                 <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded">{deal.grade}</div>
               </div>
               <div className="p-3.5">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-lg font-extrabold text-sky-600">£{deal.price}</span>
+                  <span className="text-lg font-extrabold text-orange-600">£{deal.price}</span>
                   <span className="text-[10px] text-slate-400">ex.VAT</span>
                 </div>
                 <h3 className="text-xs font-semibold text-slate-800 line-clamp-2 leading-snug mb-2">{deal.title}</h3>
@@ -375,7 +375,7 @@ function HotOffersCarousel({ isPremium }) {
                     </div>
                   ))}
                 </div>
-                <button className={`w-full py-2 text-xs font-bold rounded-lg transition-all ${isPremium ? "bg-sky-500 hover:bg-sky-600 text-white" : "bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white"}`}>
+                <button className={`w-full py-2 text-xs font-bold rounded-lg transition-all ${isPremium ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white"}`}>
                   {isPremium ? "View Deal" : "Join Now"}
                 </button>
               </div>
@@ -442,16 +442,16 @@ function FeaturedSuppliers({ isPremium }) {
           <h2 className="text-xl font-extrabold text-slate-900 mt-0.5">Featured Supplier Offers Solutions</h2>
           <p className="text-sm text-slate-500 mt-1">Get instant access to the latest wholesale and drop-ship opportunities.</p>
         </div>
-        <a href="/suppliers" className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-sky-600 border border-sky-200 rounded-xl hover:bg-sky-50 transition-colors shrink-0">
+        <a href="/suppliers" className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-xl hover:bg-orange-50 transition-colors shrink-0">
           Explore Suppliers <ArrowRight size={14} />
         </a>
       </div>
       <div className="relative">
         <div ref={scrollRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2" style={{ scrollbarWidth: "none" }}>
           {SUPPLIERS.map((sup, i) => (
-            <div key={i} className="w-[340px] shrink-0 snap-start bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-sky-200 transition-all">
+            <div key={i} className="w-[340px] shrink-0 snap-start bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg hover:border-orange-200 transition-all">
               <div className="flex items-center justify-between mb-2">
-                <a href="#" className="text-sm font-bold text-sky-600 hover:text-sky-700">{sup.name}</a>
+                <a href="#" className="text-sm font-bold text-orange-600 hover:text-orange-700">{sup.name}</a>
                 <div className="flex items-center gap-1.5">
                   <span className="text-lg">{sup.country}</span>
                   <StarRating rating={sup.rating} size={11} />
@@ -459,8 +459,8 @@ function FeaturedSuppliers({ isPremium }) {
                 </div>
               </div>
               <div className="flex gap-2 mb-3">
-                <button className="px-3 py-1.5 text-xs font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors flex items-center gap-1"><Phone size={11} /> Call Now</button>
-                <button className="px-3 py-1.5 text-xs font-semibold text-white bg-sky-500 rounded-lg hover:bg-sky-600 transition-colors flex items-center gap-1"><Mail size={11} /> Send Enquiry</button>
+                <button className="px-3 py-1.5 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-1"><Phone size={11} /> Call Now</button>
+                <button className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1"><Mail size={11} /> Send Enquiry</button>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-3">{sup.desc}</p>
               {/* Contact details (blurred for free) */}
@@ -471,12 +471,12 @@ function FeaturedSuppliers({ isPremium }) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-slate-400 uppercase font-bold">Email</span>
-                  <span className={`text-xs ${isPremium ? "text-sky-600" : "blur-sm select-none text-slate-500"}`}>wholesale@gmail.com</span>
+                  <span className={`text-xs ${isPremium ? "text-orange-600" : "blur-sm select-none text-slate-500"}`}>wholesale@gmail.com</span>
                 </div>
               </div>
               {!isPremium && (
-                <div className="mt-3 py-2.5 text-center bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-100">
-                  <p className="text-xs text-sky-600 font-semibold flex items-center justify-center gap-1"><Lock size={11} /> Join to see full details</p>
+                <div className="mt-3 py-2.5 text-center bg-gradient-to-r from-orange-50 to-orange-50 rounded-lg border border-orange-100">
+                  <p className="text-xs text-orange-600 font-semibold flex items-center justify-center gap-1"><Lock size={11} /> Join to see full details</p>
                 </div>
               )}
             </div>
@@ -497,13 +497,13 @@ function CountryGrid() {
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-xl font-extrabold text-slate-900">Find Suppliers by Country or Region</h2>
-        <a href="/suppliers" className="text-sm font-semibold text-sky-500 hover:text-sky-600 flex items-center gap-1">View all <ArrowRight size={13} /></a>
+        <a href="/suppliers" className="text-sm font-semibold text-orange-500 hover:text-orange-600 flex items-center gap-1">View all <ArrowRight size={13} /></a>
       </div>
       <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
         {COUNTRIES.map((c, i) => (
-          <button key={i} className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl border border-slate-200 bg-white hover:shadow-md hover:border-sky-200 transition-all group cursor-pointer">
+          <button key={i} className="flex flex-col items-center gap-2 py-4 px-2 rounded-xl border border-slate-200 bg-white hover:shadow-md hover:border-orange-200 transition-all group cursor-pointer">
             <span className="text-3xl group-hover:scale-110 transition-transform">{c.flag}</span>
-            <span className="text-[10px] font-semibold text-slate-600 group-hover:text-sky-600 transition-colors">{c.name}</span>
+            <span className="text-[10px] font-semibold text-slate-600 group-hover:text-orange-600 transition-colors">{c.name}</span>
           </button>
         ))}
       </div>
@@ -523,16 +523,16 @@ function FAQSection() {
           <h2 className="text-2xl font-extrabold text-slate-900">Frequently Asked Questions</h2>
           <p className="text-sm text-slate-500 mt-1">Have questions? We're here to help.</p>
         </div>
-        <a href="/help" className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors"><HelpCircle size={14} /> Help Center</a>
+        <a href="/help" className="hidden sm:flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"><HelpCircle size={14} /> Help Center</a>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {FAQS.map((faq, i) => (
-          <div key={i} className={`rounded-xl border transition-all ${openIndex === i ? "border-sky-200 bg-sky-50/50 shadow-sm" : "border-slate-200 bg-white"}`}>
+          <div key={i} className={`rounded-xl border transition-all ${openIndex === i ? "border-orange-200 bg-orange-50/50 shadow-sm" : "border-slate-200 bg-white"}`}>
             <button onClick={() => setOpenIndex(openIndex === i ? -1 : i)} className="w-full flex items-start gap-3 px-5 py-4 text-left">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-colors ${openIndex === i ? "bg-sky-500" : "bg-slate-100"}`}>
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-colors ${openIndex === i ? "bg-orange-500" : "bg-slate-100"}`}>
                 <ChevronDown size={13} className={`transition-transform ${openIndex === i ? "rotate-180 text-white" : "text-slate-400"}`} />
               </div>
-              <h3 className={`text-sm font-semibold transition-colors ${openIndex === i ? "text-sky-700" : "text-slate-800"}`}>{faq.q}</h3>
+              <h3 className={`text-sm font-semibold transition-colors ${openIndex === i ? "text-orange-700" : "text-slate-800"}`}>{faq.q}</h3>
             </button>
             {openIndex === i && (
               <div className="px-5 pb-4 pl-14"><p className="text-sm text-slate-600 leading-relaxed">{faq.a}</p></div>
@@ -551,13 +551,13 @@ function StatsTestimonials() {
   const scrollRef = useRef(null);
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-3xl overflow-hidden p-8 lg:p-12">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-900 rounded-3xl overflow-hidden p-8 lg:p-12">
         <h2 className="text-2xl font-extrabold text-white text-center mb-2">Trusted by Businesses of All Sizes</h2>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-6 mb-10 max-w-lg mx-auto">
           {[
             { icon: Flame, value: "366.61%", label: "Average markup", color: "text-orange-400" },
-            { icon: Package, value: "14,891+", label: "Active Deals", color: "text-sky-400" },
+            { icon: Package, value: "14,891+", label: "Active Deals", color: "text-orange-400" },
             { icon: Users, value: "300+", label: "New Suppliers (7d)", color: "text-emerald-400" },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
@@ -574,53 +574,17 @@ function StatsTestimonials() {
               <div className="flex gap-0.5 mb-3">{[1, 2, 3, 4, 5].map((s) => <Star key={s} size={13} className="fill-amber-400 text-amber-400" />)}</div>
               <p className="text-sm text-slate-300 leading-relaxed mb-4 line-clamp-3">"{t.text}"</p>
               <div className="flex items-center gap-2 pt-3 border-t border-white/10">
-                <div className="w-7 h-7 rounded-full bg-sky-500/30 flex items-center justify-center text-white font-bold text-[10px]">{t.author.split(" ").map((n) => n[0]).join("")}</div>
+                <div className="w-7 h-7 rounded-full bg-orange-500/30 flex items-center justify-center text-white font-bold text-[10px]">{t.author.split(" ").map((n) => n[0]).join("")}</div>
                 <div><p className="text-xs font-semibold text-white">{t.author}</p><p className="text-[10px] text-slate-400">— {t.location}</p></div>
               </div>
             </div>
           ))}
         </div>
         <div className="text-center mt-5">
-          <a href="/testimonials" className="text-sm font-semibold text-sky-400 hover:text-sky-300 flex items-center justify-center gap-1">All Testimonials <ArrowRight size={13} /></a>
+          <a href="/testimonials" className="text-sm font-semibold text-orange-400 hover:text-orange-300 flex items-center justify-center gap-1">All Testimonials <ArrowRight size={13} /></a>
         </div>
       </div>
     </section>
-  );
-}
-
-/* ═══════════════════════════════════════
-   11. FOOTER
-   ═══════════════════════════════════════ */
-function Footer() {
-  return (
-    <footer className="bg-slate-900 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-8">
-          <div className="col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center"><Tag size={14} className="text-white" /></div>
-              <span className="text-base font-extrabold text-white">Wholesale<span className="text-sky-400">Up</span></span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">The #1 wholesale and dropship platform. Connecting buyers with verified suppliers since 2004.</p>
-          </div>
-          {[
-            { title: "For Buyers", links: ["Browse Deals", "Categories", "Suppliers", "Pricing"] },
-            { title: "For Sellers", links: ["List Products", "Seller Benefits", "Get Listed", "Advertising"] },
-            { title: "Company", links: ["About Us", "Testimonials", "Help Center", "Contact"] },
-            { title: "Legal", links: ["Privacy Policy", "Terms of Service", "Cookie Policy", "GDPR"] },
-          ].map((col) => (
-            <div key={col.title}>
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">{col.title}</h4>
-              <div className="space-y-2">{col.links.map((link) => <a key={link} href="#" className="block text-xs text-slate-500 hover:text-sky-400 transition-colors">{link}</a>)}</div>
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-slate-800 mt-8 pt-6 flex items-center justify-between">
-          <p className="text-xs text-slate-500">© 2024 WholesaleUp. All rights reserved.</p>
-          <p className="text-xs text-slate-500">service@wholesaleup.co.uk</p>
-        </div>
-      </div>
-    </footer>
   );
 }
 
@@ -637,8 +601,8 @@ export default function Phase7Homepage() {
       <div className="bg-slate-100 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <a href="#" className="text-[10px] text-slate-500 hover:text-sky-500 font-medium">For buyers</a>
-            <a href="#" className="text-[10px] text-slate-500 hover:text-sky-500 font-medium">For sellers</a>
+            <a href="#" className="text-[10px] text-slate-500 hover:text-orange-500 font-medium">For buyers</a>
+            <a href="#" className="text-[10px] text-slate-500 hover:text-orange-500 font-medium">For sellers</a>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-slate-400">service@wholesaleup.co.uk</span>
@@ -651,16 +615,16 @@ export default function Phase7Homepage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
                 <Tag size={14} className="text-white" />
               </div>
-              <span className="text-base font-extrabold text-slate-900 tracking-tight">Wholesale<span className="text-sky-500">Up</span></span>
+              <span className="text-base font-extrabold text-slate-900 tracking-tight">Wholesale<span className="text-orange-500">Up</span></span>
             </div>
             <nav className="hidden md:flex items-center gap-4">
-              <a href="/deals" className="text-xs font-semibold text-slate-700 hover:text-sky-500">Deals</a>
-              <a href="/suppliers" className="text-xs font-semibold text-slate-700 hover:text-sky-500">Suppliers</a>
-              <a href="/categories" className="text-xs font-semibold text-slate-700 hover:text-sky-500">Categories</a>
-              <a href="/pricing" className="text-xs font-semibold text-slate-700 hover:text-sky-500">Pricing</a>
+              <a href="/deals" className="text-xs font-semibold text-slate-700 hover:text-orange-500">Deals</a>
+              <a href="/suppliers" className="text-xs font-semibold text-slate-700 hover:text-orange-500">Suppliers</a>
+              <a href="/categories" className="text-xs font-semibold text-slate-700 hover:text-orange-500">Categories</a>
+              <a href="/pricing" className="text-xs font-semibold text-slate-700 hover:text-orange-500">Pricing</a>
             </nav>
           </div>
 
@@ -673,7 +637,7 @@ export default function Phase7Homepage() {
               <button onClick={() => { setIsLoggedIn(true); setIsPremium(false); }}
                 className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${isLoggedIn && !isPremium ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"}`}>Free</button>
               <button onClick={() => { setIsLoggedIn(true); setIsPremium(true); }}
-                className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${isPremium ? "bg-white text-sky-700 shadow-sm" : "text-slate-500"}`}>Premium</button>
+                className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-all ${isPremium ? "bg-white text-orange-700 shadow-sm" : "text-slate-500"}`}>Premium</button>
             </div>
 
             {isLoggedIn ? (
@@ -683,12 +647,12 @@ export default function Phase7Homepage() {
                     <Crown size={11} /> Upgrade
                   </button>
                 )}
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-[10px] font-bold">JL</div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white text-[10px] font-bold">JL</div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <button className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-sky-500">Log In</button>
-                <button className="px-3 py-1.5 text-xs font-bold text-white bg-sky-500 hover:bg-sky-600 rounded-lg">Join Free</button>
+                <button className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-orange-500">Log In</button>
+                <button className="px-3 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg">Join Free</button>
               </div>
             )}
           </div>
@@ -706,7 +670,6 @@ export default function Phase7Homepage() {
       <CountryGrid />
       <FAQSection />
       <StatsTestimonials />
-      <Footer />
 
       <style>{`
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
