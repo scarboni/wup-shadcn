@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Search,
   ChevronDown,
@@ -31,6 +31,7 @@ import {
   Bell,
   BookOpen,
 } from "lucide-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 /* ─────────────── Auth Context (simulated) ─────────────── */
 const MOCK_USER = {
@@ -64,6 +65,7 @@ const NAV_LINKS = [
 function useDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -71,7 +73,66 @@ function useDropdown() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
   return { open, setOpen, ref };
+}
+
+/* ═══════════════════════════════════════════════════
+   LOTTIE LOGO — Animated logo with pause/play
+   ═══════════════════════════════════════════════════ */
+function LottieLogo() {
+  const [dotLottie, setDotLottie] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const dotLottieRefCallback = useCallback((dotLottieInstance) => {
+    setDotLottie(dotLottieInstance);
+  }, []);
+
+  const togglePlayPause = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dotLottie) return;
+
+    if (isPlaying) {
+      dotLottie.pause();
+    } else {
+      dotLottie.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  return (
+    <div className="relative group/lottie">
+      <a href="/" className="block">
+        <DotLottieReact
+          src="/animations/wholesale.lottie"
+          loop
+          autoplay
+          dotLottieRefCallback={dotLottieRefCallback}
+          className="max-w-[14.8125rem] max-h-10 flex items-center relative bottom-2.5 -left-2"
+        />
+      </a>
+      <button
+        onClick={togglePlayPause}
+        className="absolute bottom-0 right-0 w-6 h-6 bg-white/80 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover/lottie:opacity-100 transition-opacity duration-200 shadow-sm border border-slate-200"
+        type="button"
+        title={isPlaying ? "Pause animation" : "Play animation"}
+      >
+        {/* Pause Icon */}
+        {isPlaying && (
+          <svg className="w-3 h-3 text-slate-600" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+          </svg>
+        )}
+        {/* Play Icon */}
+        {!isPlaying && (
+          <svg className="w-3 h-3 text-slate-600" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════════════
@@ -103,12 +164,10 @@ function TopBar({ currency, setCurrency }) {
         {/* Right: Help, A-Z, Currency, Email */}
         <div className="flex items-center gap-4 ml-auto">
           <a href="/help" className="hidden sm:flex items-center gap-1 hover:text-white transition-colors">
-            <HelpCircle size={12} />
-            Help
+            <HelpCircle size={12} /> Help
           </a>
           <a href="/a-z" className="hidden sm:flex items-center gap-1 hover:text-white transition-colors">
-            <BookOpen size={12} />
-            A-Z Index
+            <BookOpen size={12} /> A-Z Index
           </a>
           <div className="w-px h-3.5 bg-slate-700 hidden sm:block" />
 
@@ -143,8 +202,7 @@ function TopBar({ currency, setCurrency }) {
 
           <div className="w-px h-3.5 bg-slate-700 hidden sm:block" />
           <a href="mailto:service@wholesaledeals.co.uk" className="hidden sm:flex items-center gap-1 hover:text-white transition-colors">
-            <Mail size={12} />
-            service@wholesaledeals.co.uk
+            <Mail size={12} /> service@wholesaledeals.co.uk
           </a>
         </div>
       </div>
@@ -202,8 +260,7 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
             <p className="text-white font-semibold text-sm">{user.firstName} {user.lastName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 text-amber-300 uppercase tracking-wide">
-                <Crown size={9} />
-                {user.tier}
+                <Crown size={9} /> {user.tier}
               </span>
             </div>
           </div>
@@ -260,8 +317,7 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
           onClick={onLogout}
           className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
-          <LogOut size={15} />
-          Sign Out
+          <LogOut size={15} /> Sign Out
         </button>
       </div>
     </div>
@@ -280,18 +336,10 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
     <nav className="w-full bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <a href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
-              <Tag size={18} className="text-white" />
-            </div>
-            <div className="hidden sm:block">
-              <span className="text-lg font-extrabold text-slate-900 tracking-tight">
-                Wholesale<span className="text-sky-500">Up</span>
-              </span>
-              <p className="text-[9px] text-slate-400 font-medium -mt-0.5 tracking-wide">20+ YEARS · #1 PLATFORM</p>
-            </div>
-          </a>
+          {/* Logo — Animated Lottie */}
+          <div className="shrink-0">
+            <LottieLogo />
+          </div>
 
           {/* Desktop Nav Links */}
           <div className="hidden lg:flex items-center gap-1 ml-8">
@@ -339,11 +387,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                     />
                   </button>
                   {userDd.open && (
-                    <UserDropdownMenu
-                      user={user}
-                      onLogout={onLogout}
-                      onClose={() => userDd.setOpen(false)}
-                    />
+                    <UserDropdownMenu user={user} onLogout={onLogout} onClose={() => userDd.setOpen(false)} />
                   )}
                 </div>
               </>
@@ -380,7 +424,6 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
           <div className="pb-3 animate-in fade-in slide-in-from-top-1 duration-200">
             <div className="relative">
               <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-100 transition-all">
-                {/* Search Type Selector */}
                 <select className="bg-transparent border-r border-slate-200 px-3 py-3 text-sm font-medium text-slate-600 focus:outline-none appearance-none cursor-pointer">
                   <option>Deals</option>
                   <option>Suppliers</option>
@@ -620,8 +663,7 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
           </h3>
           <div className="flex items-center justify-center mt-1.5">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
-              <Crown size={10} />
-              {user.tier}
+              <Crown size={10} /> {user.tier}
             </span>
           </div>
           <div className="mt-3 space-y-1 text-xs text-slate-500">
@@ -687,7 +729,10 @@ function UpgradeModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
@@ -759,7 +804,6 @@ export default function WholesaleUpShell() {
             <p className="text-sm text-slate-500 mb-5">
               This demonstrates the shared layout components. Toggle auth state and views to see how components adapt.
             </p>
-
             <div className="flex flex-wrap gap-3 mb-6">
               <button
                 onClick={() => setIsAuthenticated(!isAuthenticated)}
@@ -790,6 +834,8 @@ export default function WholesaleUpShell() {
               {[
                 "Top bar (buyers/sellers/currency)",
                 "Main navbar (responsive)",
+                "Animated Lottie logo ✨",
+                "Logo pause/play control",
                 "Search bar (expandable)",
                 "Auth states (guest / logged in)",
                 "User dropdown menu",
@@ -798,10 +844,11 @@ export default function WholesaleUpShell() {
                 "Upgrade modal",
                 "Footer with links",
                 "Currency selector",
-                "Active page highlighting",
-                "Notification badge",
               ].map((feature) => (
-                <div key={feature} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium">
+                <div
+                  key={feature}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium"
+                >
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   {feature}
                 </div>
@@ -819,16 +866,18 @@ export default function WholesaleUpShell() {
                   Keep your account details current to ensure suppliers receive accurate information.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {["First Name", "Last Name", "Work Email", "Mobile Number", "Company Name", "Country"].map((field) => (
-                    <div key={field}>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">{field} *</label>
-                      <input
-                        type="text"
-                        placeholder={field}
-                        className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
-                      />
-                    </div>
-                  ))}
+                  {["First Name", "Last Name", "Work Email", "Mobile Number", "Company Name", "Country"].map(
+                    (field) => (
+                      <div key={field}>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">{field} *</label>
+                        <input
+                          type="text"
+                          placeholder={field}
+                          className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+                        />
+                      </div>
+                    )
+                  )}
                 </div>
                 <button className="mt-6 px-6 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
                   Update Contact Details
@@ -843,12 +892,19 @@ export default function WholesaleUpShell() {
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome to WholesaleUp</h1>
                 <p className="text-sm text-slate-500 mb-6">
-                  This shell layout provides the foundation for all pages. The navbar, footer, sidebar, and modals are ready — next we'll build the filter sidebar and deal cards.
+                  This shell layout provides the foundation for all pages. The navbar, footer, sidebar, and modals are
+                  ready — next we&apos;ll build the filter sidebar and deal cards.
                 </p>
                 <div className="flex justify-center gap-3">
-                  <span className="px-3 py-1.5 text-xs font-semibold bg-sky-100 text-sky-700 rounded-full">Phase 1 ✓</span>
-                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">Phase 2 — Filters</span>
-                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">Phase 3 — Deals</span>
+                  <span className="px-3 py-1.5 text-xs font-semibold bg-sky-100 text-sky-700 rounded-full">
+                    Phase 1 ✓
+                  </span>
+                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">
+                    Phase 2 — Filters
+                  </span>
+                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">
+                    Phase 3 — Deals
+                  </span>
                 </div>
               </div>
             </div>
