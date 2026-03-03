@@ -12,6 +12,18 @@
   }
 }
 
+/* Sidebar rotating stats animation */
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(100%); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-100%); }
+}
+
+.animate-slideUp {
+  animation: slideUp 3s ease-in-out;
+}
+
 @layer utilities {
   .line-clamp-2 {
     display: -webkit-box;

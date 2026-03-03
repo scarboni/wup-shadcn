@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 80" fill="none">
+  <defs>
+    <linearGradient id="arrowGrad" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="40%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  <!-- Left downstroke of W -->
+  <path d="M8 12 L22 62" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Middle V of W -->
+  <path d="M22 62 L40 28 L56 62" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Right upstroke becoming arrow shaft (white to orange gradient) -->
+  <path d="M56 62 L72 18" stroke="url(#arrowGrad)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Orange arrowhead -->
+  <polygon points="72,4 60,22 84,22" fill="#f97316"/>
+</svg>

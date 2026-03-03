@@ -100,7 +100,7 @@ function LockedSection({
         <p className="text-xs text-orange-600 font-semibold mb-2">{message}</p>
         <button
           onClick={onCTA}
-          className="px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg hover:from-orange-600 hover:to-orange-800 transition-all"
+          className="px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
         >
           {ctaText}
         </button>
@@ -120,7 +120,7 @@ function LockedSection({
             <p className="text-sm text-slate-700 font-semibold mb-2">{message}</p>
             <button
               onClick={onCTA}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 rounded-lg hover:from-orange-600 hover:to-orange-800 transition-all shadow-lg shadow-orange-200"
+              className="px-5 py-2.5 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all shadow-lg shadow-orange-200"
             >
               {ctaText}
             </button>
@@ -331,7 +331,7 @@ function UpgradeModal({ onClose }) {
           </div>
 
           {/* CTA */}
-          <button className="w-full mt-5 py-3.5 bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2">
+          <button className="w-full mt-5 py-3.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-orange-200 flex items-center justify-center gap-2">
             <Crown size={16} /> Upgrade Now
           </button>
 
@@ -368,7 +368,7 @@ function CTASwitch({
   const variantClasses = {
     primary: isPremium
       ? "bg-orange-500 hover:bg-orange-600 text-white"
-      : "bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white",
+      : "bg-orange-500 hover:bg-orange-600 text-white",
     secondary: isPremium
       ? "bg-emerald-500 hover:bg-emerald-600 text-white"
       : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white",
@@ -507,7 +507,7 @@ function GatedSupplierCard({ onUpgrade }) {
         <div className="mt-3">
           <LockedSection
             variant="replace"
-            message="Join to see supplier details"
+            message="Join to access supplier details"
             ctaText="Join Now!"
             onCTA={onUpgrade}
           />
@@ -730,7 +730,7 @@ function GatedContactPanel({ onUpgrade }) {
         ) : (
           <button
             onClick={onUpgrade}
-            className="w-full py-2.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 rounded-xl transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all flex items-center justify-center gap-1.5"
           >
             <Lock size={13} /> Join Now
           </button>

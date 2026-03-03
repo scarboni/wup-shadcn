@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Search,
   ChevronDown,
@@ -31,7 +31,6 @@ import {
   Bell,
   BookOpen,
 } from "lucide-react";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 /* ─────────────── Auth Context (simulated) ─────────────── */
 const MOCK_USER = {
@@ -65,7 +64,6 @@ const NAV_LINKS = [
 function useDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -73,66 +71,7 @@ function useDropdown() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
   return { open, setOpen, ref };
-}
-
-/* ═══════════════════════════════════════════════════
-   LOTTIE LOGO — Animated logo with pause/play
-   ═══════════════════════════════════════════════════ */
-function LottieLogo() {
-  const [dotLottie, setDotLottie] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(true);
-
-  const dotLottieRefCallback = useCallback((dotLottieInstance) => {
-    setDotLottie(dotLottieInstance);
-  }, []);
-
-  const togglePlayPause = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!dotLottie) return;
-
-    if (isPlaying) {
-      dotLottie.pause();
-    } else {
-      dotLottie.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  return (
-    <div className="relative group/lottie">
-      <a href="/" className="block">
-        <DotLottieReact
-          src="/animations/wholesale.lottie"
-          loop
-          autoplay
-          dotLottieRefCallback={dotLottieRefCallback}
-          className="max-w-[14.8125rem] max-h-10 flex items-center relative bottom-2.5 -left-2"
-        />
-      </a>
-      <button
-        onClick={togglePlayPause}
-        className="absolute bottom-0 right-0 w-6 h-6 bg-white/80 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover/lottie:opacity-100 transition-opacity duration-200 shadow-sm border border-slate-200"
-        type="button"
-        title={isPlaying ? "Pause animation" : "Play animation"}
-      >
-        {/* Pause Icon */}
-        {isPlaying && (
-          <svg className="w-3 h-3 text-slate-600" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-          </svg>
-        )}
-        {/* Play Icon */}
-        {!isPlaying && (
-          <svg className="w-3 h-3 text-slate-600" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        )}
-      </button>
-    </div>
-  );
 }
 
 /* ═══════════════════════════════════════════════════
@@ -147,7 +86,7 @@ function TopBar({ currency, setCurrency }) {
         {/* Left: Buyer/Seller links */}
         <div className="hidden md:flex items-center gap-5">
           <div className="flex items-center gap-1.5">
-            <span className="text-orange-400 font-semibold">For retailers</span>
+            <span className="text-sky-400 font-semibold">For retailers</span>
             <a href="/benefits" className="hover:text-white transition-colors ml-2">Retailer Benefits</a>
             <span className="text-slate-600">·</span>
             <a href="/register" className="hover:text-white transition-colors">Register</a>
@@ -164,10 +103,12 @@ function TopBar({ currency, setCurrency }) {
         {/* Right: Help, A-Z, Currency, Email */}
         <div className="flex items-center gap-4 ml-auto">
           <a href="/help" className="hidden sm:flex items-center gap-1 hover:text-white transition-colors">
-            <HelpCircle size={12} /> Help
+            <HelpCircle size={12} />
+            Help
           </a>
           <a href="/a-z" className="hidden sm:flex items-center gap-1 hover:text-white transition-colors">
-            <BookOpen size={12} /> A-Z Index
+            <BookOpen size={12} />
+            A-Z Index
           </a>
           <div className="w-px h-3.5 bg-slate-700 hidden sm:block" />
 
@@ -189,7 +130,7 @@ function TopBar({ currency, setCurrency }) {
                     onClick={() => { setCurrency(c); currencyDd.setOpen(false); }}
                     className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
                       currency.code === c.code
-                        ? "bg-orange-50 text-orange-700 font-semibold"
+                        ? "bg-sky-50 text-sky-700 font-semibold"
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
@@ -202,7 +143,8 @@ function TopBar({ currency, setCurrency }) {
 
           <div className="w-px h-3.5 bg-slate-700 hidden sm:block" />
           <a href="mailto:service@wholesaleup.com" className="hidden sm:flex items-center gap-1 hover:text-white transition-colors">
-            <Mail size={12} /> service@wholesaleup.com
+            <Mail size={12} />
+            service@wholesaleup.com
           </a>
         </div>
       </div>
@@ -253,14 +195,15 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
       {/* User Header */}
       <div className="px-4 py-3.5 bg-gradient-to-r from-slate-900 to-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-10 h-10 rounded-full bg-sky-500 flex items-center justify-center text-white font-bold text-sm">
             {user.initials}
           </div>
           <div>
             <p className="text-white font-semibold text-sm">{user.firstName} {user.lastName}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-400/20 text-amber-300 uppercase tracking-wide">
-                <Crown size={9} /> {user.tier}
+                <Crown size={9} />
+                {user.tier}
               </span>
             </div>
           </div>
@@ -275,7 +218,7 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
       {user.tier === "STANDARD" && (
         <a
           href="/pricing"
-          className="block mx-3 mt-3 px-3 py-2 rounded-lg bg-orange-500 text-white text-xs font-semibold text-center hover:bg-orange-600 transition-all shadow-sm"
+          className="block mx-3 mt-3 px-3 py-2 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white text-xs font-semibold text-center hover:from-sky-600 hover:to-blue-700 transition-all shadow-sm"
         >
           Upgrade to Premium — Unlock All Suppliers
         </a>
@@ -296,9 +239,9 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
                 key={item.label}
                 href={item.href}
                 onClick={onClose}
-                className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-orange-600 transition-colors group"
+                className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-sky-600 transition-colors group"
               >
-                <item.icon size={15} className="text-slate-400 group-hover:text-orange-500 transition-colors" />
+                <item.icon size={15} className="text-slate-400 group-hover:text-sky-500 transition-colors" />
                 <span className="flex-1">{item.label}</span>
                 {item.badge && (
                   <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -317,7 +260,8 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
           onClick={onLogout}
           className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
-          <LogOut size={15} /> Sign Out
+          <LogOut size={15} />
+          Sign Out
         </button>
       </div>
     </div>
@@ -336,10 +280,18 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
     <nav className="w-full bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo — Animated Lottie */}
-          <div className="shrink-0">
-            <LottieLogo />
-          </div>
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
+              <Tag size={18} className="text-white" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="text-lg font-extrabold text-slate-900 tracking-tight">
+                Wholesale<span className="text-sky-500">Up</span>
+              </span>
+              <p className="text-[9px] text-slate-400 font-medium -mt-0.5 tracking-wide">20+ YEARS · #1 PLATFORM</p>
+            </div>
+          </a>
 
           {/* Desktop Nav Links */}
           <div className="hidden lg:flex items-center gap-1 ml-8">
@@ -347,7 +299,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
               <a
                 key={link.label}
                 href={link.href}
-                className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                className="px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
               >
                 {link.label}
               </a>
@@ -359,7 +311,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
             {/* Search Toggle */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+              className="p-2 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
             >
               <Search size={20} />
             </button>
@@ -367,7 +319,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
             {isAuthenticated ? (
               <>
                 {/* Notifications */}
-                <button className="p-2 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors relative">
+                <button className="p-2 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors relative">
                   <Bell size={20} />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                 </button>
@@ -378,7 +330,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                     onClick={() => userDd.setOpen(!userDd.open)}
                     className="flex items-center gap-2 p-1 pr-2 rounded-lg hover:bg-slate-50 transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
+                    <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white font-bold text-xs">
                       {user.initials}
                     </div>
                     <ChevronDown
@@ -387,7 +339,11 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                     />
                   </button>
                   {userDd.open && (
-                    <UserDropdownMenu user={user} onLogout={onLogout} onClose={() => userDd.setOpen(false)} />
+                    <UserDropdownMenu
+                      user={user}
+                      onLogout={onLogout}
+                      onClose={() => userDd.setOpen(false)}
+                    />
                   )}
                 </div>
               </>
@@ -396,13 +352,13 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                 <a
                   href="/login"
                   onClick={(e) => { e.preventDefault(); onLogin(); }}
-                  className="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-slate-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                  className="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-slate-700 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
                 >
                   Log In
                 </a>
                 <a
                   href="/register"
-                  className="inline-flex px-4 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-all shadow-sm"
+                  className="inline-flex px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 rounded-lg transition-all shadow-sm"
                 >
                   Join Free
                 </a>
@@ -412,7 +368,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+              className="lg:hidden p-2 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
             >
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -423,7 +379,8 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
         {searchOpen && (
           <div className="pb-3 animate-in fade-in slide-in-from-top-1 duration-200">
             <div className="relative">
-              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:border-sky-400 focus-within:ring-2 focus-within:ring-sky-100 transition-all">
+                {/* Search Type Selector */}
                 <select className="bg-transparent border-r border-slate-200 px-3 py-3 text-sm font-medium text-slate-600 focus:outline-none appearance-none cursor-pointer">
                   <option>Deals</option>
                   <option>Suppliers</option>
@@ -435,7 +392,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                   className="flex-1 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
                   autoFocus
                 />
-                <button className="px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors">
+                <button className="px-5 py-3 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors">
                   Search
                 </button>
               </div>
@@ -444,7 +401,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                 {["Wholesale Pajamas", "Leather Boots", "Sneakers", "Buy Toys Bulk"].map((term) => (
                   <button
                     key={term}
-                    className="px-2.5 py-1 text-xs text-slate-500 bg-slate-100 hover:bg-orange-100 hover:text-orange-600 rounded-full transition-colors"
+                    className="px-2.5 py-1 text-xs text-slate-500 bg-slate-100 hover:bg-sky-100 hover:text-sky-600 rounded-full transition-colors"
                   >
                     {term}
                   </button>
@@ -463,23 +420,23 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
               <a
                 key={link.label}
                 href={link.href}
-                className="block px-3 py-2.5 text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                className="block px-3 py-2.5 text-sm font-medium text-slate-700 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
               >
                 {link.label}
               </a>
             ))}
             <div className="h-px bg-slate-100 my-2" />
             <div className="flex items-center gap-2 px-3 py-2">
-              <span className="text-xs text-orange-500 font-semibold">For retailers:</span>
-              <a href="/benefits" className="text-xs text-slate-500 hover:text-orange-600">Benefits</a>
+              <span className="text-xs text-sky-500 font-semibold">For retailers:</span>
+              <a href="/benefits" className="text-xs text-slate-500 hover:text-sky-600">Benefits</a>
               <span className="text-slate-300">·</span>
-              <a href="/register" className="text-xs text-slate-500 hover:text-orange-600">Register</a>
+              <a href="/register" className="text-xs text-slate-500 hover:text-sky-600">Register</a>
             </div>
             <div className="flex items-center gap-2 px-3 py-2">
               <span className="text-xs text-emerald-500 font-semibold">For suppliers:</span>
-              <a href="/supplier-benefits" className="text-xs text-slate-500 hover:text-orange-600">Benefits</a>
+              <a href="/supplier-benefits" className="text-xs text-slate-500 hover:text-sky-600">Benefits</a>
               <span className="text-slate-300">·</span>
-              <a href="/get-listed" className="text-xs text-slate-500 hover:text-orange-600">Get Listed</a>
+              <a href="/get-listed" className="text-xs text-slate-500 hover:text-sky-600">Get Listed</a>
             </div>
             {!isAuthenticated && (
               <div className="pt-2 space-y-2">
@@ -491,7 +448,7 @@ function Navbar({ isAuthenticated, user, onLogin, onLogout }) {
                 </button>
                 <a
                   href="/register"
-                  className="block w-full px-4 py-2.5 text-sm font-semibold text-white bg-orange-500 rounded-lg text-center"
+                  className="block w-full px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-sky-500 to-blue-600 rounded-lg text-center"
                 >
                   Join Free
                 </a>
@@ -558,11 +515,11 @@ function Footer() {
           {/* Brand Column */}
           <div className="col-span-2 md:col-span-1">
             <a href="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center">
                 <Tag size={18} className="text-white" />
               </div>
               <span className="text-lg font-extrabold text-white tracking-tight">
-                Wholesale<span className="text-orange-400">Up</span>
+                Wholesale<span className="text-sky-400">Up</span>
               </span>
             </a>
             <p className="text-sm text-slate-400 mb-4 leading-relaxed">
@@ -570,7 +527,7 @@ function Footer() {
             </p>
             <a
               href="mailto:service@wholesaleup.com"
-              className="text-sm text-orange-400 hover:text-orange-300 transition-colors"
+              className="text-sm text-sky-400 hover:text-sky-300 transition-colors"
             >
               service@wholesaleup.com
             </a>
@@ -585,7 +542,7 @@ function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-sm text-slate-400 hover:text-orange-400 transition-colors"
+                      className="text-sm text-slate-400 hover:text-sky-400 transition-colors"
                     >
                       {link.label}
                     </a>
@@ -649,12 +606,12 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
     <aside className="w-72 shrink-0">
       {/* User Card */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4 shadow-sm">
-        <div className="bg-gradient-to-br from-orange-500 to-orange-700 px-5 pt-5 pb-10 text-center relative">
+        <div className="bg-gradient-to-br from-sky-500 to-blue-600 px-5 pt-5 pb-10 text-center relative">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-50" />
         </div>
         <div className="px-5 pb-4 -mt-8 relative">
           <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center mx-auto">
-            <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-full h-full rounded-full bg-sky-500 flex items-center justify-center text-white font-bold text-lg">
               {user.initials}
             </div>
           </div>
@@ -663,7 +620,8 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
           </h3>
           <div className="flex items-center justify-center mt-1.5">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wide">
-              <Crown size={10} /> {user.tier}
+              <Crown size={10} />
+              {user.tier}
             </span>
           </div>
           <div className="mt-3 space-y-1 text-xs text-slate-500">
@@ -678,7 +636,7 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
           </div>
           <a
             href="/pricing"
-            className="block mt-3 w-full py-2 text-center text-xs font-bold text-orange-600 border border-orange-200 hover:bg-orange-50 rounded-lg transition-colors"
+            className="block mt-3 w-full py-2 text-center text-xs font-bold text-sky-600 border border-sky-200 hover:bg-sky-50 rounded-lg transition-colors"
           >
             Renew Account
           </a>
@@ -701,11 +659,11 @@ function AccountSidebar({ user, activePage = "account-profile" }) {
                   href={item.href}
                   className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${
                     isActive
-                      ? "text-orange-600 bg-orange-50 font-semibold border-r-2 border-orange-500"
-                      : "text-slate-600 hover:text-orange-600 hover:bg-slate-50"
+                      ? "text-sky-600 bg-sky-50 font-semibold border-r-2 border-sky-500"
+                      : "text-slate-600 hover:text-sky-600 hover:bg-slate-50"
                   }`}
                 >
-                  <item.icon size={16} className={isActive ? "text-orange-500" : "text-slate-400"} />
+                  <item.icon size={16} className={isActive ? "text-sky-500" : "text-slate-400"} />
                   <span className="flex-1">{item.label}</span>
                   {item.badge && (
                     <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -729,16 +687,13 @@ function UpgradeModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
         className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Visual Header */}
-        <div className="relative bg-gradient-to-br from-orange-500 to-orange-700 px-8 pt-8 pb-16 text-center">
+        <div className="relative bg-gradient-to-br from-sky-500 to-blue-600 px-8 pt-8 pb-16 text-center">
           <button
             onClick={onClose}
             className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
@@ -747,7 +702,7 @@ function UpgradeModal({ isOpen, onClose }) {
           </button>
           <Shield className="w-14 h-14 text-white/90 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-white">Unlock Full Access</h2>
-          <p className="text-orange-100 text-sm mt-1">Upgrade to a Premium Membership</p>
+          <p className="text-sky-100 text-sm mt-1">Upgrade to a Premium Membership</p>
         </div>
 
         {/* Content */}
@@ -758,13 +713,13 @@ function UpgradeModal({ isOpen, onClose }) {
             </p>
             <a
               href="/pricing"
-              className="block w-full py-3 text-center text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all shadow-sm"
+              className="block w-full py-3 text-center text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 rounded-xl transition-all shadow-sm"
             >
               Upgrade Now
             </a>
             <p className="text-center text-xs text-slate-400 mt-3">
               Already a premium member?{" "}
-              <a href="/login" className="text-orange-500 hover:text-orange-600 font-semibold">Log in.</a>
+              <a href="/login" className="text-sky-500 hover:text-sky-600 font-semibold">Log in.</a>
             </p>
           </div>
         </div>
@@ -798,12 +753,13 @@ export default function WholesaleUpShell() {
           {/* Demo Controls */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
             <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Settings size={20} className="text-orange-500" />
+              <Settings size={20} className="text-sky-500" />
               Phase 1 Shell — Interactive Demo
             </h2>
             <p className="text-sm text-slate-500 mb-5">
               This demonstrates the shared layout components. Toggle auth state and views to see how components adapt.
             </p>
+
             <div className="flex flex-wrap gap-3 mb-6">
               <button
                 onClick={() => setIsAuthenticated(!isAuthenticated)}
@@ -823,7 +779,7 @@ export default function WholesaleUpShell() {
               </button>
               <button
                 onClick={() => setCurrentView(currentView === "home" ? "dashboard" : "home")}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition-all"
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-sky-100 text-sky-700 hover:bg-sky-200 transition-all"
               >
                 Toggle: {currentView === "home" ? "Show Dashboard Layout" : "Show Home Layout"}
               </button>
@@ -834,8 +790,6 @@ export default function WholesaleUpShell() {
               {[
                 "Top bar (buyers/sellers/currency)",
                 "Main navbar (responsive)",
-                "Animated Lottie logo ✨",
-                "Logo pause/play control",
                 "Search bar (expandable)",
                 "Auth states (guest / logged in)",
                 "User dropdown menu",
@@ -844,11 +798,10 @@ export default function WholesaleUpShell() {
                 "Upgrade modal",
                 "Footer with links",
                 "Currency selector",
+                "Active page highlighting",
+                "Notification badge",
               ].map((feature) => (
-                <div
-                  key={feature}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium"
-                >
+                <div key={feature} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-medium">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   {feature}
                 </div>
@@ -866,20 +819,18 @@ export default function WholesaleUpShell() {
                   Keep your account details current to ensure suppliers receive accurate information.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {["First Name", "Last Name", "Work Email", "Mobile Number", "Company Name", "Country"].map(
-                    (field) => (
-                      <div key={field}>
-                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">{field} *</label>
-                        <input
-                          type="text"
-                          placeholder={field}
-                          className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
-                        />
-                      </div>
-                    )
-                  )}
+                  {["First Name", "Last Name", "Work Email", "Mobile Number", "Company Name", "Country"].map((field) => (
+                    <div key={field}>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1.5">{field} *</label>
+                      <input
+                        type="text"
+                        placeholder={field}
+                        className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <button className="mt-6 px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
+                <button className="mt-6 px-6 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm">
                   Update Contact Details
                 </button>
               </div>
@@ -887,24 +838,17 @@ export default function WholesaleUpShell() {
           ) : (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
               <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center mx-auto mb-4">
-                  <Tag size={32} className="text-orange-500" />
+                <div className="w-16 h-16 rounded-2xl bg-sky-100 flex items-center justify-center mx-auto mb-4">
+                  <Tag size={32} className="text-sky-500" />
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900 mb-2">Welcome to WholesaleUp</h1>
                 <p className="text-sm text-slate-500 mb-6">
-                  This shell layout provides the foundation for all pages. The navbar, footer, sidebar, and modals are
-                  ready — next we&apos;ll build the filter sidebar and deal cards.
+                  This shell layout provides the foundation for all pages. The navbar, footer, sidebar, and modals are ready — next we'll build the filter sidebar and deal cards.
                 </p>
                 <div className="flex justify-center gap-3">
-                  <span className="px-3 py-1.5 text-xs font-semibold bg-orange-100 text-orange-700 rounded-full">
-                    Phase 1 ✓
-                  </span>
-                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">
-                    Phase 2 — Filters
-                  </span>
-                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">
-                    Phase 3 — Deals
-                  </span>
+                  <span className="px-3 py-1.5 text-xs font-semibold bg-sky-100 text-sky-700 rounded-full">Phase 1 ✓</span>
+                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">Phase 2 — Filters</span>
+                  <span className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-500 rounded-full">Phase 3 — Deals</span>
                 </div>
               </div>
             </div>

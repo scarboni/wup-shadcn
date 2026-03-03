@@ -95,6 +95,16 @@ const PHASES = [
     bgColor: "bg-slate-100",
     iconColor: "text-slate-500",
   },
+  {
+    phase: 9,
+    title: "Single Deal",
+    desc: "ImageGallery, PricingPanel, PlatformComparison, SupplierSidebar, RelatedDeals, Tags, DealDetails",
+    href: "/single-deal",
+    icon: Tag,
+    color: "from-teal-500 to-cyan-600",
+    bgColor: "bg-teal-50",
+    iconColor: "text-teal-500",
+  },
 ];
 
 export default function IndexPage() {

@@ -235,7 +235,7 @@ function PricingCard({ tier, name, pricing, period, features, isPopular = false,
     }`}>
       {/* Popular Badge */}
       {isPopular && (
-        <div className="bg-gradient-to-r from-orange-500 to-orange-700 py-2 text-center">
+        <div className="bg-orange-500 py-2 text-center">
           <p className="text-white text-xs font-bold flex items-center justify-center gap-1.5">
             <Flame size={12} />
             85% of customers choose this package!
@@ -275,7 +275,7 @@ function PricingCard({ tier, name, pricing, period, features, isPopular = false,
         {/* CTA */}
         <button className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${
           isPopular
-            ? "bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white"
+            ? "bg-orange-500 hover:bg-orange-600 text-white"
             : tier === "premiumPlus"
             ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
             : "bg-slate-900 hover:bg-slate-800 text-white"

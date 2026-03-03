@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Search,
   ChevronDown,
   ChevronUp,
   X,
   Star,
+  Heart,
+  Mail,
   SlidersHorizontal,
   Minus,
   ArrowUpDown,
@@ -15,20 +17,22 @@ import {
   Tag,
   Flame,
   Info,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 
 /* ─────────── Flag Emoji Helper ─────────── */
-const FLAGS = {
-  UK: "🇬🇧",
-  DE: "🇩🇪",
-  PL: "🇵🇱",
-  NL: "🇳🇱",
-  US: "🇺🇸",
-  ES: "🇪🇸",
-  IT: "🇮🇹",
-  FR: "🇫🇷",
-  AU: "🇦🇺",
-};
+// Flat flag images via flagcdn.com — ISO 3166-1 alpha-2 lowercase codes
+const FLAG_CODES = { UK: "gb", DE: "de", PL: "pl", NL: "nl", US: "us", ES: "es", IT: "it", FR: "fr", AU: "au" };
+function FlagImg({ code, size = 20 }) {
+  const iso = FLAG_CODES[code] || code?.toLowerCase();
+  if (!iso) return null;
+  return <img src={`https://flagcdn.com/w40/${iso}.png`} alt={code} className="inline-block rounded-sm object-cover" style={{ width: size, height: size * 0.7 }} />;
+}
+// Backwards-compat: FLAGS object now returns JSX
+const FLAGS = Object.fromEntries(
+  Object.keys(FLAG_CODES).map((k) => [k, <FlagImg key={k} code={k} size={18} />])
+);
 
 /* ─────────── Mock Data ─────────── */
 const POPULAR_SEARCHES = [
@@ -42,22 +46,169 @@ const POPULAR_SEARCHES = [
 ];
 
 const CATEGORIES = [
-  { id: "apparel", label: "Apparel & Clothing", count: 1245 },
-  { id: "baby", label: "Baby Products", count: 423 },
-  { id: "business", label: "Business Supplies & Services", count: 897 },
-  { id: "computers", label: "Computer & Software", count: 634 },
-  { id: "electrical", label: "Electrical & Lighting", count: 521 },
-  { id: "floral", label: "Floral & Garden", count: 189 },
-  { id: "food", label: "Food & Drink", count: 312 },
-  { id: "gifts", label: "Gifts & Giftware", count: 456 },
-  { id: "health", label: "Health & Beauty", count: 789 },
-  { id: "home", label: "Home Supplies", count: 654 },
-  { id: "jewellery", label: "Jewellery & Watches", count: 378 },
-  { id: "sports", label: "Sports, Hobbies & Leisure", count: 543 },
-  { id: "telephony", label: "Telephony & Mobile Phones", count: 267 },
-  { id: "toys", label: "Toys & Games", count: 498 },
-  { id: "travel", label: "Travel & Outdoors", count: 321 },
+  {
+    id: "baby-products", label: "Baby Products", count: 4691,
+    children: [
+      { id: "baby-clothing-shoes", label: "Clothing & Shoes", count: 1200 },
+      { id: "baby-feeding-nursing", label: "Feeding & Nursing", count: 834 },
+      { id: "baby-toys-activity", label: "Toys & Activity", count: 1502 },
+      { id: "baby-pushchairs-prams", label: "Pushchairs & Prams", count: 389 },
+      { id: "baby-safety-health", label: "Safety & Health", count: 766 },
+    ],
+  },
+  {
+    id: "clothing", label: "Clothing", count: 14672,
+    children: [
+      { id: "clothing-mens", label: "Men's Clothing", count: 3845 },
+      { id: "clothing-womens", label: "Women's Clothing", count: 5062 },
+      { id: "clothing-childrens", label: "Children's Clothing", count: 2280 },
+      { id: "clothing-sportswear", label: "Sportswear", count: 1519 },
+      { id: "clothing-accessories", label: "Accessories", count: 1966 },
+    ],
+  },
+  {
+    id: "computing", label: "Computing", count: 2483,
+    children: [
+      { id: "computing-laptops", label: "Laptops & Notebooks", count: 618 },
+      { id: "computing-desktops", label: "Desktop PCs", count: 270 },
+      { id: "computing-tablets", label: "Tablets", count: 412 },
+      { id: "computing-components", label: "Components", count: 724 },
+      { id: "computing-peripherals", label: "Peripherals", count: 459 },
+    ],
+  },
+  {
+    id: "consumer-electronic", label: "Consumer Electronic", count: 3590,
+    children: [
+      { id: "ce-tv-cinema", label: "TV & Home Cinema", count: 914 },
+      { id: "ce-audio-hifi", label: "Audio & HiFi", count: 569 },
+      { id: "ce-cameras", label: "Cameras & Camcorders", count: 406 },
+      { id: "ce-smart-home", label: "Smart Home", count: 811 },
+      { id: "ce-wearable", label: "Wearable Tech", count: 890 },
+    ],
+  },
+  {
+    id: "health-beauty", label: "Health & Beauty", count: 5467,
+    children: [
+      { id: "hb-supplements", label: "Diet, Supplements, & Vitamins", count: 612 },
+      { id: "hb-hair-skin", label: "Hair & Skin Care", count: 834 },
+      { id: "hb-makeup", label: "Makeup & Cosmetics", count: 923 },
+      { id: "hb-manicure", label: "Manicure & Pedicure", count: 410 },
+      { id: "hb-natural", label: "Natural & Alternative Therapy", count: 389 },
+      { id: "hb-perfumes", label: "Perfumes & Fragrances", count: 1290 },
+      { id: "hb-personal", label: "Personal Care", count: 1009 },
+    ],
+  },
+  {
+    id: "home-garden", label: "Home & Garden", count: 9210,
+    children: [
+      { id: "hg-furniture", label: "Furniture", count: 2220 },
+      { id: "hg-kitchen", label: "Kitchen & Dining", count: 1812 },
+      { id: "hg-bedding", label: "Bedding & Linen", count: 1405 },
+      { id: "hg-garden-tools", label: "Garden Tools", count: 1093 },
+      { id: "hg-decor", label: "Home Decor", count: 2680 },
+    ],
+  },
+  {
+    id: "jewellery-watches", label: "Jewellery & Watches", count: 3178,
+    children: [
+      { id: "jw-rings", label: "Rings", count: 715 },
+      { id: "jw-necklaces", label: "Necklaces", count: 612 },
+      { id: "jw-watches", label: "Watches", count: 920 },
+      { id: "jw-earrings", label: "Earrings", count: 438 },
+      { id: "jw-bracelets", label: "Bracelets", count: 493 },
+    ],
+  },
+  {
+    id: "leisure-entertainment", label: "Leisure & Entertainment", count: 2890,
+    children: [
+      { id: "le-books", label: "Books & Magazines", count: 507 },
+      { id: "le-dvds", label: "DVDs & Blu-ray", count: 304 },
+      { id: "le-musical", label: "Musical Instruments", count: 416 },
+      { id: "le-board-games", label: "Board Games", count: 789 },
+      { id: "le-arts-crafts", label: "Arts & Crafts", count: 874 },
+    ],
+  },
+  {
+    id: "mobile-phones", label: "Mobile & Home Phones", count: 4267,
+    children: [
+      { id: "mp-smartphones", label: "Smartphones", count: 1320 },
+      { id: "mp-cases", label: "Phone Cases", count: 1145 },
+      { id: "mp-chargers", label: "Chargers & Cables", count: 728 },
+      { id: "mp-screen", label: "Screen Protectors", count: 415 },
+      { id: "mp-headphones", label: "Headphones", count: 659 },
+    ],
+  },
+  {
+    id: "office-business", label: "Office & Business", count: 1897,
+    children: [
+      { id: "ob-supplies", label: "Office Supplies", count: 618 },
+      { id: "ob-printers", label: "Printers & Ink", count: 207 },
+      { id: "ob-furniture", label: "Office Furniture", count: 345 },
+      { id: "ob-filing", label: "Filing & Storage", count: 412 },
+      { id: "ob-presentation", label: "Presentation", count: 315 },
+    ],
+  },
+  {
+    id: "police-auctions", label: "Police Auctions & Auction Houses", count: 823,
+    children: [
+      { id: "pa-lost-property", label: "Lost Property", count: 204 },
+      { id: "pa-seized", label: "Seized Goods", count: 286 },
+      { id: "pa-unclaimed", label: "Unclaimed Parcels", count: 173 },
+      { id: "pa-surplus", label: "Government Surplus", count: 160 },
+    ],
+  },
+  {
+    id: "sports-fitness", label: "Sports & Fitness", count: 3543,
+    children: [
+      { id: "sf-gym", label: "Gym Equipment", count: 811 },
+      { id: "sf-outdoor", label: "Outdoor Sports", count: 914 },
+      { id: "sf-team", label: "Team Sports", count: 608 },
+      { id: "sf-cycling", label: "Cycling", count: 546 },
+      { id: "sf-swimming", label: "Swimming", count: 664 },
+    ],
+  },
+  {
+    id: "surplus-stocklots", label: "Surplus & Stocklots", count: 6312,
+    children: [
+      { id: "ss-mixed", label: "Mixed Pallets", count: 907 },
+      { id: "ss-returns", label: "Customer Returns", count: 1412 },
+      { id: "ss-end-of-line", label: "End of Line", count: 1089 },
+      { id: "ss-overstock", label: "Overstock", count: 1615 },
+      { id: "ss-clearance", label: "Clearance", count: 1289 },
+    ],
+  },
+  {
+    id: "toys-games", label: "Toys & Games", count: 3498,
+    children: [
+      { id: "tg-action", label: "Action Figures", count: 608 },
+      { id: "tg-building", label: "Building Toys", count: 812 },
+      { id: "tg-dolls", label: "Dolls", count: 406 },
+      { id: "tg-educational", label: "Educational Toys", count: 915 },
+      { id: "tg-outdoor", label: "Outdoor Toys", count: 757 },
+    ],
+  },
 ];
+
+// Helper: get all child IDs for a parent category
+function getChildIds(parentId) {
+  const parent = CATEGORIES.find((c) => c.id === parentId);
+  return parent?.children?.map((ch) => ch.id) || [];
+}
+
+// Helper: find parent category for a given child ID
+function findParentCategory(childId) {
+  return CATEGORIES.find((c) => c.children?.some((ch) => ch.id === childId));
+}
+
+// Helper: flat list of all category IDs (parents + children)
+function getAllCategoryLabels() {
+  const map = {};
+  CATEGORIES.forEach((c) => {
+    map[c.id] = c.label;
+    c.children?.forEach((ch) => { map[ch.id] = ch.label; });
+  });
+  return map;
+}
 
 const COUNTRIES = [
   { code: "UK", name: "United Kingdom", count: 105247 },
@@ -76,6 +227,18 @@ const GRADES = [
   { id: "returns", label: "Returns / Mixed Stock" },
   { id: "liquidation", label: "Liquidation Stocklots" },
   { id: "refurbished", label: "Refurbished" },
+];
+
+const BUSINESS_TYPES = [
+  { id: "wholesalers", label: "Wholesalers" },
+  { id: "distributors", label: "Distributors" },
+  { id: "importers", label: "Importers" },
+  { id: "manufacturers", label: "Manufacturers" },
+  { id: "dropshippers", label: "Dropshippers" },
+  { id: "liquidators", label: "Liquidators" },
+  { id: "agents", label: "Agents" },
+  { id: "trading-companies", label: "Trading Companies" },
+  { id: "other", label: "Other Suppliers" },
 ];
 
 const RATINGS = [
@@ -149,7 +312,7 @@ function StarRating({ rating, size = 12 }) {
 /* ═══════════════════════════════════════════════════
    CHECKBOX ITEM
    ═══════════════════════════════════════════════════ */
-function CheckboxItem({ id, label, count, checked, onChange, prefix }) {
+function CheckboxItem({ id, label, count, checked, onChange, prefix, highlighted }) {
   return (
     <label
       htmlFor={id}
@@ -163,11 +326,11 @@ function CheckboxItem({ id, label, count, checked, onChange, prefix }) {
         className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-400 focus:ring-offset-0 cursor-pointer"
       />
       {prefix && <span className="text-base shrink-0">{prefix}</span>}
-      <span className="text-sm text-slate-600 group-hover:text-slate-900 flex-1 truncate">
+      <span className={`text-sm flex-1 truncate ${highlighted ? "text-orange-500 font-semibold" : "text-slate-600 group-hover:text-slate-900"}`}>
         {label}
       </span>
       {count !== undefined && (
-        <span className="text-xs text-slate-400 tabular-nums">
+        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full ${highlighted ? "bg-blue-50 text-blue-600 font-medium" : "text-slate-400"}`}>
           {count.toLocaleString()}
         </span>
       )}
@@ -176,9 +339,112 @@ function CheckboxItem({ id, label, count, checked, onChange, prefix }) {
 }
 
 /* ═══════════════════════════════════════════════════
+   PRICE RANGE SLIDER — Dual-handle range with inputs
+   ═══════════════════════════════════════════════════ */
+const PRICE_MIN = 0;
+const PRICE_MAX = 10000;
+
+function PriceRangeSlider({ filters, setFilters }) {
+  const minVal = filters.priceMin === "" ? PRICE_MIN : Number(filters.priceMin);
+  const maxVal = filters.priceMax === "" ? PRICE_MAX : Number(filters.priceMax);
+  const trackRef = useRef(null);
+
+  const getPercent = useCallback((val) =>
+    ((val - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100
+  , []);
+
+  const handleMinInput = (e) => {
+    const val = e.target.value === "" ? "" : Math.min(Number(e.target.value), maxVal - 1);
+    setFilters((p) => ({ ...p, priceMin: val === "" ? "" : String(val) }));
+  };
+
+  const handleMaxInput = (e) => {
+    const val = e.target.value === "" ? "" : Math.max(Number(e.target.value), minVal + 1);
+    setFilters((p) => ({ ...p, priceMax: val === "" ? "" : String(val) }));
+  };
+
+  const handleMinRange = (e) => {
+    const val = Math.min(Number(e.target.value), maxVal - 1);
+    setFilters((p) => ({ ...p, priceMin: String(val) }));
+  };
+
+  const handleMaxRange = (e) => {
+    const val = Math.max(Number(e.target.value), minVal + 1);
+    setFilters((p) => ({ ...p, priceMax: String(val) }));
+  };
+
+  const minPercent = getPercent(minVal);
+  const maxPercent = getPercent(maxVal);
+
+  return (
+    <div>
+      {/* Min / Max inputs */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex-1">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase mb-1 block">Min.</label>
+          <input
+            type="number"
+            value={filters.priceMin}
+            onChange={handleMinInput}
+            placeholder="0"
+            min={PRICE_MIN}
+            max={PRICE_MAX}
+            className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
+          />
+        </div>
+        <span className="text-slate-300 mt-4">–</span>
+        <div className="flex-1">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase mb-1 block">Max.</label>
+          <input
+            type="number"
+            value={filters.priceMax}
+            onChange={handleMaxInput}
+            placeholder="10000"
+            min={PRICE_MIN}
+            max={PRICE_MAX}
+            className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
+          />
+        </div>
+      </div>
+
+      {/* Dual range slider */}
+      <div className="relative h-5 flex items-center" ref={trackRef}>
+        {/* Track background */}
+        <div className="absolute w-full h-1 bg-slate-200 rounded-full" />
+        {/* Active range (orange) */}
+        <div
+          className="absolute h-1 bg-orange-400 rounded-full"
+          style={{ left: `${minPercent}%`, width: `${maxPercent - minPercent}%` }}
+        />
+        {/* Min thumb */}
+        <input
+          type="range"
+          min={PRICE_MIN}
+          max={PRICE_MAX}
+          value={minVal}
+          onChange={handleMinRange}
+          className="absolute w-full h-1 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-orange-400 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow [&::-moz-range-thumb]:cursor-pointer"
+          style={{ zIndex: minVal > PRICE_MAX - 100 ? 40 : 30 }}
+        />
+        {/* Max thumb */}
+        <input
+          type="range"
+          min={PRICE_MIN}
+          max={PRICE_MAX}
+          value={maxVal}
+          onChange={handleMaxRange}
+          className="absolute w-full h-1 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-400 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:relative [&::-webkit-slider-thumb]:z-30 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-orange-400 [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow [&::-moz-range-thumb]:cursor-pointer"
+          style={{ zIndex: 30 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    FILTER SIDEBAR
    ═══════════════════════════════════════════════════ */
-function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
+function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = false, hidePrice = false, hideDropshipping = false, hideGrade = false, showBusinessType = false }) {
   const [categorySearch, setCategorySearch] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
 
@@ -201,9 +467,8 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
   return (
     <aside
       className={`
-        w-72 shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden
-        lg:block
-        ${isOpen ? "fixed inset-0 z-50 w-full max-w-sm rounded-none lg:relative lg:w-72 lg:max-w-none lg:rounded-xl" : "hidden lg:block"}
+        bg-white border border-slate-200 shadow-sm overflow-hidden
+        ${isOpen ? "w-full h-full rounded-none lg:w-72 lg:rounded-xl lg:h-auto lg:shrink-0" : "hidden lg:block w-72 shrink-0 rounded-xl"}
       `}
     >
       {/* Header */}
@@ -217,12 +482,14 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
             onClick={() =>
               setFilters({
                 rating: null,
-                categories: [],
+                category: null,
+                subcategory: null,
                 priceMin: "",
                 priceMax: "",
                 countries: [],
                 dropshipping: false,
                 grades: [],
+                businessTypes: [],
                 keyword: "",
               })
             }
@@ -239,7 +506,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
         </div>
       </div>
 
-      <div className="overflow-y-auto max-h-[calc(100vh-180px)] lg:max-h-none">
+      <div className="overflow-y-auto max-h-[calc(100vh-180px)] lg:max-h-none custom-scrollbar">
         {/* ── Popular Searches ── */}
         <FilterSection title="Popular Searches">
           <div className="flex flex-wrap gap-1.5">
@@ -260,32 +527,37 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
         </FilterSection>
 
         {/* ── Rating ── */}
+        {!hideRating && (
         <FilterSection
           title="Rating"
           onClear={filters.rating ? () => setFilters((p) => ({ ...p, rating: null })) : undefined}
         >
-          <div className="space-y-1.5">
+          <div className="space-y-0.5">
             {RATINGS.map((r) => (
               <label
                 key={r.value}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-all ${
+                onClick={() =>
+                  setFilters((p) => ({
+                    ...p,
+                    rating: p.rating === r.value ? null : r.value,
+                  }))
+                }
+                className={`flex items-center gap-2.5 py-1.5 px-2.5 rounded-lg cursor-pointer transition-all ${
                   filters.rating === r.value
                     ? "bg-orange-50 border border-orange-200"
                     : "hover:bg-slate-50 border border-transparent"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="rating"
-                  checked={filters.rating === r.value}
-                  onChange={() =>
-                    setFilters((p) => ({
-                      ...p,
-                      rating: p.rating === r.value ? null : r.value,
-                    }))
-                  }
-                  className="w-3.5 h-3.5 text-orange-500 focus:ring-orange-400 focus:ring-offset-0"
-                />
+                {/* Custom radio circle */}
+                <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                  filters.rating === r.value
+                    ? "border-orange-500"
+                    : "border-slate-300"
+                }`}>
+                  {filters.rating === r.value && (
+                    <span className="w-2 h-2 rounded-full bg-orange-500" />
+                  )}
+                </span>
                 <StarRating rating={r.value} />
                 <span className="text-xs text-slate-500 font-medium">
                   {r.label}
@@ -294,13 +566,56 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
             ))}
           </div>
         </FilterSection>
+        )}
+
+        {/* ── Selected Category → Subcategory Group ── */}
+        {filters.category && (() => {
+          const selectedParent = CATEGORIES.find((c) => c.id === filters.category);
+          if (!selectedParent?.children) return null;
+          return (
+            <FilterSection
+              title={selectedParent.label}
+              onClear={() => setFilters((p) => ({ ...p, category: null, subcategory: null }))}
+            >
+              <div className="space-y-0.5 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+                {selectedParent.children.map((sub) => (
+                  <button
+                    key={sub.id}
+                    onClick={() =>
+                      setFilters((p) => ({
+                        ...p,
+                        subcategory: p.subcategory === sub.id ? null : sub.id,
+                      }))
+                    }
+                    className="w-full flex items-center justify-between py-1.5 text-left group"
+                  >
+                    <span className={`text-sm transition-colors ${
+                      filters.subcategory === sub.id
+                        ? "text-orange-500 font-semibold"
+                        : "text-slate-600 group-hover:text-orange-500"
+                    }`}>
+                      {sub.label}
+                    </span>
+                    <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full ${
+                      filters.subcategory === sub.id
+                        ? "bg-blue-50 text-blue-600 font-medium"
+                        : "text-slate-400"
+                    }`}>
+                      {sub.count.toLocaleString()}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </FilterSection>
+          );
+        })()}
 
         {/* ── Categories ── */}
         <FilterSection
           title="Categories"
           onClear={
-            filters.categories.length > 0
-              ? () => setFilters((p) => ({ ...p, categories: [] }))
+            filters.category
+              ? () => setFilters((p) => ({ ...p, category: null, subcategory: null }))
               : undefined
           }
         >
@@ -319,46 +634,42 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
           </div>
           <div className="space-y-0.5 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
             {filteredCategories.map((cat) => (
-              <CheckboxItem
+              <button
                 key={cat.id}
-                id={`cat-${cat.id}`}
-                label={cat.label}
-                count={cat.count}
-                checked={filters.categories.includes(cat.id)}
-                onChange={() => toggleArrayFilter("categories", cat.id)}
-              />
+                onClick={() =>
+                  setFilters((p) => ({
+                    ...p,
+                    category: p.category === cat.id ? null : cat.id,
+                    subcategory: p.category === cat.id ? null : p.subcategory,
+                  }))
+                }
+                className="w-full flex items-center justify-between py-1.5 text-left group"
+              >
+                <span className={`text-sm transition-colors ${
+                  filters.category === cat.id
+                    ? "text-orange-500 font-semibold"
+                    : "text-slate-600 group-hover:text-orange-500"
+                }`}>
+                  {cat.label}
+                </span>
+                <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full ${
+                  filters.category === cat.id
+                    ? "bg-blue-50 text-blue-600 font-medium"
+                    : "text-slate-400"
+                }`}>
+                  {cat.count.toLocaleString()}
+                </span>
+              </button>
             ))}
           </div>
         </FilterSection>
 
         {/* ── Price Range ── */}
-        <FilterSection title="Price">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type="number"
-                value={filters.priceMin}
-                onChange={(e) =>
-                  setFilters((p) => ({ ...p, priceMin: e.target.value }))
-                }
-                placeholder="Min."
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
-              />
-            </div>
-            <Minus size={14} className="text-slate-300 shrink-0" />
-            <div className="relative flex-1">
-              <input
-                type="number"
-                value={filters.priceMax}
-                onChange={(e) =>
-                  setFilters((p) => ({ ...p, priceMax: e.target.value }))
-                }
-                placeholder="Max."
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
-              />
-            </div>
-          </div>
-        </FilterSection>
+        {!hidePrice && (
+          <FilterSection title="Price">
+            <PriceRangeSlider filters={filters} setFilters={setFilters} />
+          </FilterSection>
+        )}
 
         {/* ── Country ── */}
         <FilterSection
@@ -382,7 +693,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
               className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all"
             />
           </div>
-          <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
             {filteredCountries.map((country) => (
               <CheckboxItem
                 key={country.code}
@@ -398,47 +709,75 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
         </FilterSection>
 
         {/* ── Dropshipping ── */}
-        <FilterSection title="Dropshipping">
-          <label className="flex items-center gap-2.5 cursor-pointer">
-            <div
-              className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                filters.dropshipping ? "bg-orange-500" : "bg-slate-200"
-              }`}
-              onClick={() =>
-                setFilters((p) => ({ ...p, dropshipping: !p.dropshipping }))
-              }
-            >
+        {!hideDropshipping && (
+          <FilterSection title="Dropshipping">
+            <label className="flex items-center gap-2.5 cursor-pointer">
               <div
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
-                  filters.dropshipping ? "translate-x-4" : "translate-x-0.5"
+                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
+                  filters.dropshipping ? "bg-orange-500" : "bg-slate-200"
                 }`}
-              />
-            </div>
-            <span className="text-sm text-slate-600">Dropshipped Deals</span>
-          </label>
-        </FilterSection>
+                onClick={() =>
+                  setFilters((p) => ({ ...p, dropshipping: !p.dropshipping }))
+                }
+              >
+                <div
+                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
+                    filters.dropshipping ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </div>
+              <span className="text-sm text-slate-600">Dropshipped Deals</span>
+            </label>
+          </FilterSection>
+        )}
 
         {/* ── Grade ── */}
-        <FilterSection
-          title="Grade"
-          onClear={
-            filters.grades.length > 0
-              ? () => setFilters((p) => ({ ...p, grades: [] }))
-              : undefined
-          }
-        >
-          <div className="space-y-0.5">
-            {GRADES.map((grade) => (
-              <CheckboxItem
-                key={grade.id}
-                id={`grade-${grade.id}`}
-                label={grade.label}
-                checked={filters.grades.includes(grade.id)}
-                onChange={() => toggleArrayFilter("grades", grade.id)}
-              />
-            ))}
-          </div>
-        </FilterSection>
+        {!hideGrade && (
+          <FilterSection
+            title="Grade"
+            onClear={
+              filters.grades.length > 0
+                ? () => setFilters((p) => ({ ...p, grades: [] }))
+                : undefined
+            }
+          >
+            <div className="space-y-0.5">
+              {GRADES.map((grade) => (
+                <CheckboxItem
+                  key={grade.id}
+                  id={`grade-${grade.id}`}
+                  label={grade.label}
+                  checked={filters.grades.includes(grade.id)}
+                  onChange={() => toggleArrayFilter("grades", grade.id)}
+                />
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {/* ── Business Type ── */}
+        {showBusinessType && (
+          <FilterSection
+            title="Business Type"
+            onClear={
+              (filters.businessTypes?.length > 0)
+                ? () => setFilters((p) => ({ ...p, businessTypes: [] }))
+                : undefined
+            }
+          >
+            <div className="space-y-0.5">
+              {BUSINESS_TYPES.map((bt) => (
+                <CheckboxItem
+                  key={bt.id}
+                  id={`bt-${bt.id}`}
+                  label={bt.label}
+                  checked={(filters.businessTypes || []).includes(bt.id)}
+                  onChange={() => toggleArrayFilter("businessTypes", bt.id)}
+                />
+              ))}
+            </div>
+          </FilterSection>
+        )}
 
         {/* ── Promo Info Block ── */}
         <div className="px-4 py-4 bg-gradient-to-b from-orange-50 to-white border-t border-slate-100">
@@ -453,6 +792,13 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
           </p>
         </div>
       </div>
+      <style>{`
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(203,213,225,0.5) transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(203,213,225,0.6); border-radius: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.7); }
+      `}</style>
     </aside>
   );
 }
@@ -460,7 +806,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose }) {
 /* ═══════════════════════════════════════════════════
    ACTIVE FILTER CHIPS
    ═══════════════════════════════════════════════════ */
-function ActiveFilterChips({ filters, setFilters }) {
+function ActiveFilterChips({ filters, setFilters, searchMode }) {
   const chips = [];
 
   if (filters.keyword) {
@@ -468,6 +814,7 @@ function ActiveFilterChips({ filters, setFilters }) {
       key: "keyword",
       label: filters.keyword,
       type: "keyword",
+      prefix: searchMode === "exact" ? "exact:" : searchMode === "all" ? "all:" : null,
       onRemove: () => setFilters((p) => ({ ...p, keyword: "" })),
     });
   }
@@ -480,27 +827,38 @@ function ActiveFilterChips({ filters, setFilters }) {
       onRemove: () => setFilters((p) => ({ ...p, rating: null })),
     });
   }
-  filters.categories.forEach((catId) => {
-    const cat = CATEGORIES.find((c) => c.id === catId);
-    if (cat)
+  if (filters.category) {
+    const parentCat = CATEGORIES.find((c) => c.id === filters.category);
+    if (parentCat) {
       chips.push({
-        key: `cat-${catId}`,
-        label: cat.label,
+        key: `cat-${filters.category}`,
+        label: parentCat.label,
         type: "category",
         onRemove: () =>
-          setFilters((p) => ({
-            ...p,
-            categories: p.categories.filter((c) => c !== catId),
-          })),
+          setFilters((p) => ({ ...p, category: null, subcategory: null })),
       });
-  });
+    }
+  }
+  if (filters.subcategory) {
+    const parent = findParentCategory(filters.subcategory);
+    const child = parent?.children?.find((ch) => ch.id === filters.subcategory);
+    if (child) {
+      chips.push({
+        key: `subcat-${filters.subcategory}`,
+        label: child.label,
+        type: "category",
+        onRemove: () =>
+          setFilters((p) => ({ ...p, subcategory: null })),
+      });
+    }
+  }
   filters.countries.forEach((code) => {
     const country = COUNTRIES.find((c) => c.code === code);
     if (country)
       chips.push({
         key: `country-${code}`,
         label: country.name,
-        icon: <span className="text-xs">{FLAGS[code]}</span>,
+        icon: <FlagImg code={code} size={16} />,
         type: "country",
         onRemove: () =>
           setFilters((p) => ({
@@ -531,6 +889,20 @@ function ActiveFilterChips({ filters, setFilters }) {
       onRemove: () => setFilters((p) => ({ ...p, dropshipping: false })),
     });
   }
+  (filters.businessTypes || []).forEach((btId) => {
+    const bt = BUSINESS_TYPES.find((b) => b.id === btId);
+    if (bt)
+      chips.push({
+        key: `bt-${btId}`,
+        label: bt.label,
+        type: "businessType",
+        onRemove: () =>
+          setFilters((p) => ({
+            ...p,
+            businessTypes: (p.businessTypes || []).filter((b) => b !== btId),
+          })),
+      });
+  });
 
   if (chips.length === 0) return null;
 
@@ -541,6 +913,7 @@ function ActiveFilterChips({ filters, setFilters }) {
     country: "bg-orange-50 text-orange-700 border-orange-200",
     grade: "bg-orange-50 text-orange-700 border-orange-200",
     dropshipping: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    businessType: "bg-blue-50 text-blue-700 border-blue-200",
   };
 
   return (
@@ -548,28 +921,37 @@ function ActiveFilterChips({ filters, setFilters }) {
       {chips.map((chip) => (
         <span
           key={chip.key}
-          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${chipColors[chip.type]}`}
+          className={`inline-flex items-center gap-0 rounded-full text-xs font-medium border overflow-hidden ${chipColors[chip.type]}`}
         >
-          {chip.icon}
-          {chip.label}
-          <button
-            onClick={chip.onRemove}
-            className="ml-0.5 w-3.5 h-3.5 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
-          >
-            <X size={9} />
-          </button>
+          {chip.prefix && (
+            <span className="px-2 py-1 bg-orange-500 text-white text-[10px] font-bold rounded-l-full">
+              {chip.prefix}
+            </span>
+          )}
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${chip.prefix ? "pl-2" : ""}`}>
+            {chip.icon}
+            {chip.label}
+            <button
+              onClick={chip.onRemove}
+              className="ml-0.5 w-3.5 h-3.5 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
+            >
+              <X size={9} />
+            </button>
+          </span>
         </span>
       ))}
       <button
         onClick={() =>
           setFilters({
             rating: null,
-            categories: [],
+            category: null,
+            subcategory: null,
             priceMin: "",
             priceMax: "",
             countries: [],
             dropshipping: false,
             grades: [],
+            businessTypes: [],
             keyword: "",
           })
         }
@@ -577,6 +959,81 @@ function ActiveFilterChips({ filters, setFilters }) {
       >
         Clear All
       </button>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   FAVOURITE + SUBSCRIBE BUTTONS
+   ═══════════════════════════════════════════════════ */
+function FavouriteSubscribeButtons() {
+  const [faved, setFaved] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+  const [hoveredBtn, setHoveredBtn] = useState(null); // "fav" | "sub" | null
+
+  const handleFav = () => {
+    if (faved) {
+      // Unfavouriting also unsubscribes
+      setFaved(false);
+      setSubscribed(false);
+    } else {
+      setFaved(true);
+    }
+  };
+
+  const handleSub = () => {
+    setSubscribed(!subscribed);
+  };
+
+  return (
+    <div className="shrink-0 relative flex items-center">
+      {/* Tooltip — appears to the left of the pill, arrow pointing right */}
+      {hoveredBtn && (
+        <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 w-52 bg-white text-slate-700 text-xs leading-relaxed rounded-lg px-3 py-2.5 shadow-lg border border-slate-200 z-20 pointer-events-none">
+          {hoveredBtn === "fav"
+            ? (faved ? "Remove from favourites" : "Save to your favourites for quick access later")
+            : (subscribed ? "Unsubscribe from email alerts" : "Get email alerts when new deals match your filters")}
+          {/* Arrow pointing right */}
+          <div className="absolute left-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[5px] border-l-white" />
+          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-px w-0 h-0 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[5px] border-l-slate-200 -z-10" />
+        </div>
+      )}
+
+      {/* Pill container — subscribe expands to the left, favourite stays on right */}
+      <div className="inline-flex items-center border border-slate-200 rounded-full transition-all duration-300">
+        {/* Subscribe half — slides in to the left when faved */}
+        {faved && (
+          <>
+            <button
+              onClick={handleSub}
+              onMouseEnter={() => setHoveredBtn("sub")}
+              onMouseLeave={() => setHoveredBtn(null)}
+              className={`w-9 h-9 flex items-center justify-center rounded-l-full transition-all ${
+                subscribed
+                  ? "bg-orange-500 hover:bg-orange-600"
+                  : "text-slate-400 hover:bg-slate-50 hover:text-orange-500"
+              }`}
+            >
+              <Mail size={16} className={subscribed ? "text-white" : ""} />
+            </button>
+            <div className="w-px self-stretch my-1.5 bg-slate-200" />
+          </>
+        )}
+
+        {/* Favourite half — always visible on the right */}
+        <button
+          onClick={handleFav}
+          onMouseEnter={() => setHoveredBtn("fav")}
+          onMouseLeave={() => setHoveredBtn(null)}
+          className={`w-9 h-9 flex items-center justify-center transition-all ${
+            faved
+              ? "bg-red-500 hover:bg-red-600 rounded-r-full"
+              : "text-slate-400 hover:bg-slate-50 hover:text-red-500 rounded-full"
+          }`}
+        >
+          <Heart size={16} className={faved ? "fill-white text-white" : ""} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -596,8 +1053,11 @@ function SearchToolbar({
   inlineSearch,
   setInlineSearch,
   onToggleMobileFilter,
+  viewMode,
+  setViewMode,
 }) {
   const [sortOpen, setSortOpen] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const sortRef = useRef(null);
 
   useEffect(() => {
@@ -618,14 +1078,25 @@ function SearchToolbar({
 
   return (
     <div className="space-y-3">
-      {/* Title Row */}
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">{title}</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
-            ({totalCount.toLocaleString()} deals)
-          </p>
+      {/* Title Row + Follow */}
+      <div className="flex gap-4">
+        {/* Left: title + description */}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-extrabold text-slate-900">{title} <span className="text-base font-semibold text-slate-400">({totalCount.toLocaleString()} deals)</span></h1>
+          <h2 className="text-[15px] font-normal text-slate-500 mt-1 leading-relaxed">
+            Discover in used and wholesale suppliers that fit your business needs. Find top-quality accessories, made-to-measure goods for brand and own-brand products at competitive wholesale prices. We connect you with reliable UK-based sources to optimise your inventory and{" "}
+            {descExpanded ? (
+              <>
+                maximise profits. Our comprehensive database is updated daily with fresh wholesale deals from verified suppliers across the UK, Europe, and beyond. Whether you&apos;re sourcing consumer electronics, health &amp; beauty products, clothing, or home goods, our platform gives you the competitive edge you need to grow your reselling business.{" "}
+                <button onClick={() => setDescExpanded(false)} className="text-orange-500 hover:text-orange-600 font-medium">Show Less</button>
+              </>
+            ) : (
+              <button onClick={() => setDescExpanded(true)} className="text-orange-500 hover:text-orange-600 font-medium">Show More</button>
+            )}
+          </h2>
         </div>
+        {/* Right: Favourite + Subscribe buttons */}
+        <FavouriteSubscribeButtons />
       </div>
 
       {/* Search + Sort Row */}
@@ -657,10 +1128,52 @@ function SearchToolbar({
             type="text"
             value={inlineSearch}
             onChange={(e) => setInlineSearch(e.target.value)}
-            placeholder="Search within results..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && inlineSearch.trim()) {
+                setFilters((p) => ({ ...p, keyword: inlineSearch.trim() }));
+              }
+            }}
+            placeholder="Search within these results..."
+            className="w-full pl-9 pr-9 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
           />
+          <button
+            onClick={() => {
+              if (inlineSearch.trim()) {
+                setFilters((p) => ({ ...p, keyword: inlineSearch.trim() }));
+              }
+            }}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all"
+            aria-label="Search"
+          >
+            <Search size={14} />
+          </button>
         </div>
+
+        {/* Grid / List Toggle */}
+        {viewMode && setViewMode && (
+          <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                viewMode === "grid"
+                  ? "bg-white text-orange-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <LayoutGrid size={14} /> Grid
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                viewMode === "list"
+                  ? "bg-white text-orange-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <List size={14} /> List
+            </button>
+          </div>
+        )}
 
         {/* Mobile Filter Toggle */}
         <button
@@ -668,7 +1181,7 @@ function SearchToolbar({
           className="lg:hidden flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
         >
           <SlidersHorizontal size={16} />
-          Filter
+          Filters
         </button>
 
         {/* Sort Dropdown */}
@@ -713,7 +1226,7 @@ function SearchToolbar({
       </div>
 
       {/* Active Filter Chips */}
-      <ActiveFilterChips filters={filters} setFilters={setFilters} />
+      <ActiveFilterChips filters={filters} setFilters={setFilters} searchMode={searchMode} />
     </div>
   );
 }
@@ -734,10 +1247,10 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
   };
 
   return (
-    <div className="flex items-center justify-between flex-wrap gap-3 py-4 border-t border-slate-100">
+    <div className="flex items-center justify-between flex-wrap gap-3 py-5 border-t border-slate-100">
       {/* Left: Total + Per Page */}
       <div className="flex items-center gap-3">
-        <span className="text-xs text-slate-500">
+        <span className="text-sm text-slate-500">
           Total deals: <strong className="text-slate-700">{total.toLocaleString()}</strong>
         </span>
         <div className="flex items-center gap-1.5">
@@ -747,7 +1260,7 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
               setPerPage(Number(e.target.value));
               setPage(1);
             }}
-            className="px-2 py-1 text-xs border border-slate-200 rounded-lg bg-white text-slate-600 focus:border-orange-300 outline-none cursor-pointer"
+            className="px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:border-orange-300 outline-none cursor-pointer"
           >
             {[9, 18, 27, 36].map((n) => (
               <option key={n} value={n}>
@@ -763,9 +1276,9 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
         <button
           onClick={() => setPage(Math.max(1, page - 1))}
           disabled={page === 1}
-          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+          className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
         >
-          <ChevronLeft size={14} />
+          <ChevronLeft size={16} />
         </button>
 
         {/* Page Numbers */}
@@ -784,10 +1297,10 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
             <button
               key={pageNum}
               onClick={() => setPage(pageNum)}
-              className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all ${
+              className={`w-9 h-9 rounded-lg text-sm font-semibold transition-all ${
                 page === pageNum
                   ? "bg-orange-500 text-white shadow-sm"
-                  : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  : "bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600 hover:shadow-sm"
               }`}
             >
               {pageNum}
@@ -798,21 +1311,21 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
         <button
           onClick={() => setPage(Math.min(totalPages, page + 1))}
           disabled={page === totalPages}
-          className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+          className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
         >
-          <ChevronRight size={14} />
+          <ChevronRight size={16} />
         </button>
 
         {/* Go To */}
         <div className="flex items-center gap-1.5 ml-3">
-          <span className="text-xs text-slate-400">Go to</span>
+          <span className="text-sm text-slate-400">Go to</span>
           <input
             type="number"
             value={goToPage}
             onChange={(e) => setGoToPage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGoTo()}
             placeholder="Page"
-            className="w-14 px-2 py-1.5 text-xs border border-slate-200 rounded-lg text-center tabular-nums focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none"
+            className="w-20 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-center tabular-nums focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none"
           />
         </div>
       </div>
@@ -865,18 +1378,23 @@ function PlaceholderDealCard({ index }) {
   );
 }
 
+/* ── Named Exports for reuse in other pages ── */
+export { FilterSidebar, SearchToolbar, Pagination, ActiveFilterChips, TrendingBanner, PlaceholderDealCard, StarRating };
+
 /* ═══════════════════════════════════════════════════
    MAIN DEMO — Phase 2 Full Layout
    ═══════════════════════════════════════════════════ */
 export default function Phase2FilterSidebar() {
   const [filters, setFilters] = useState({
     rating: null,
-    categories: [],
+    category: null,
+    subcategory: null,
     priceMin: "",
     priceMax: "",
     countries: [],
     dropshipping: false,
     grades: [],
+    businessTypes: [],
     keyword: "",
   });
   const [sortBy, setSortBy] = useState("latest");
@@ -890,9 +1408,11 @@ export default function Phase2FilterSidebar() {
   // Count active filters for the badge
   const activeFilterCount =
     (filters.rating ? 1 : 0) +
-    filters.categories.length +
+    (filters.category ? 1 : 0) +
+    (filters.subcategory ? 1 : 0) +
     filters.countries.length +
     filters.grades.length +
+    (filters.businessTypes || []).length +
     (filters.dropshipping ? 1 : 0) +
     (filters.keyword ? 1 : 0) +
     (filters.priceMin ? 1 : 0) +
@@ -1027,7 +1547,7 @@ export default function Phase2FilterSidebar() {
                           <h3 className="font-bold text-slate-800">
                             Supplier Name Placeholder
                           </h3>
-                          <span className="text-xs">🇬🇧</span>
+                          <FlagImg code="UK" size={16} />
                           <span className="text-xs text-slate-500">
                             United Kingdom
                           </span>
@@ -1077,10 +1597,11 @@ export default function Phase2FilterSidebar() {
       )}
 
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(203,213,225,0.5) transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 2px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(203,213,225,0.6); border-radius: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.7); }
       `}</style>
     </div>
   );
