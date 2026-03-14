@@ -1,0 +1,4 @@
+const lr = require("lucide-react");
+const icons = ["Search","ChevronDown","ChevronRight","Menu","X","LayoutDashboard","User","MessageSquare","ShoppingBag","Heart","Store","Package","PlusCircle","Coins","Headphones","Settings","LogOut","Globe","Mail","HelpCircle","Crown","Shield","Clock","Bell","BookOpen","Home","SlidersHorizontal","Building2","CreditCard","ShoppingCart","Baby","Shirt","Monitor","Smartphone","Sparkles","Flower2","Watch","Gamepad2","Briefcase","Gavel","Dumbbell","Boxes","Tv","BadgeCheck","ThumbsUp","TrendingUp","PanelLeftClose","PanelLeftOpen","Users","Percent","ClipboardList","Link2","Archive","Tag"];
+const missing = icons.filter(function(i) { return !lr[i]; });
+if (missing.length) { console.log("Missing: " + missing.join(", ")); } else { console.log("All " + icons.length + " lucide icons are valid"); }

@@ -6,7 +6,6 @@ import {
   Lock,
   Unlock,
   Crown,
-  Star,
   Eye,
   EyeOff,
   Phone,
@@ -31,10 +30,21 @@ import {
   Clock,
   MessageSquare,
 } from "lucide-react";
+import StarRating from "@/components/shared/star-rating";
+import VerifiedBadge from "@/components/shared/verified-badge";
 
 /* ═══════════════════════════════════════════════════
    TIER CONTEXT — provides isPremium + tier info
    throughout the component tree
+
+   PRODUCTION (H9): Replace this custom TierContext with
+   NextAuth useSession() hook. The session JWT already
+   contains user.tier, so:
+     const { data: session } = useSession();
+     const tier = session?.user?.tier || "free";
+     const isPremium = tier === "PREMIUM" || tier === "PRO";
+     const isLoggedIn = status === "authenticated";
+   This eliminates the need for TierContext + TierProvider.
    ═══════════════════════════════════════════════════ */
 const TierContext = createContext({
   tier: "free", // "guest" | "free" | "premium"
@@ -100,7 +110,7 @@ function LockedSection({
         <p className="text-xs text-orange-600 font-semibold mb-2">{message}</p>
         <button
           onClick={onCTA}
-          className="px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
+          className="px-4 py-2.5 text-sm font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-all"
         >
           {ctaText}
         </button>
@@ -233,7 +243,7 @@ function PremiumGate({
 
 /* ═══════════════════════════════════════════════════
    4. UPGRADE MODAL — full-screen upsell overlay
-   matching the WholesaleDeals free-tier gating pages
+   matching the WholesaleUp free-tier gating pages
    ═══════════════════════════════════════════════════ */
 function UpgradeModal({ onClose }) {
   useEffect(() => {
@@ -309,7 +319,7 @@ function UpgradeModal({ onClose }) {
                 },
                 {
                   icon: Shield,
-                  text: "100% Money Back Guarantee",
+                  text: "Verified Supplier Guarantee",
                   color: "text-amber-500 bg-amber-100",
                 },
               ].map((feature) => (
@@ -352,7 +362,7 @@ function UpgradeModal({ onClose }) {
    on tier (Join Now / View Deal / Send Enquiry)
    ═══════════════════════════════════════════════════ */
 function CTASwitch({
-  freeText = "Join Now",
+  freeText = "Join Now!",
   premiumText = "View Deal",
   guestText = "Join Free",
   onAction,
@@ -407,22 +417,17 @@ function GatedSupplierCard({ onUpgrade }) {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-lg">🇬🇧</span>
-          <div className="flex items-center gap-0.5">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} size={11} className="fill-amber-400 text-amber-400" />
-            ))}
-          </div>
-          <span className="text-xs text-slate-500">5.0</span>
+          <StarRating rating={5} size={11} showValue />
         </div>
       </div>
 
       {/* Action Buttons */}
       <div className="flex gap-2 mb-3">
-        <button className="px-3 py-1.5 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center gap-1">
+        <button className="px-3 py-1.5 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center gap-1">
           <Phone size={11} /> Call Now
         </button>
         <button
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1 ${
+          className={`px-3 py-1.5 text-sm font-semibold rounded-lg flex items-center gap-1 ${
             isPremium
               ? "text-white bg-orange-500 hover:bg-orange-600"
               : "text-white bg-orange-400 opacity-60 cursor-not-allowed"
@@ -435,7 +440,7 @@ function GatedSupplierCard({ onUpgrade }) {
       </div>
 
       {/* Description */}
-      <p className="text-xs text-slate-500 leading-relaxed mb-3">
+      <p className="text-sm text-slate-500 leading-relaxed mb-3">
         We are a wholesaler of sportswear clothing and shoes. We offer high
         quality adidas originals men's sports jackets, nike air max, reebok
         trainers and more.
@@ -455,7 +460,7 @@ function GatedSupplierCard({ onUpgrade }) {
               </span>
             </BlurredContent>
             {!isPremium && (
-              <span className="text-[9px] text-red-400 font-medium">
+              <span className="text-[10px] text-red-400 font-medium">
                 Locked
               </span>
             )}
@@ -524,7 +529,8 @@ function GatedDealCard({ onUpgrade }) {
   const { isPremium } = useTier();
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group">
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all group cursor-pointer"
+      onClick={(e) => { if (!e.target.closest("a, button, input, [role=button]")) window.location.href = "/deal"; }}>
       <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <Package size={48} className="text-slate-200 group-hover:text-orange-200 transition-colors" />
         <div className="absolute top-2 right-2 text-lg">🇬🇧</div>
@@ -537,7 +543,7 @@ function GatedDealCard({ onUpgrade }) {
       </div>
 
       <div className="p-3.5">
-        <h3 className="text-xs font-semibold text-slate-800 line-clamp-2 leading-snug mb-2">
+        <h3 className="text-sm font-semibold text-slate-800 line-clamp-2 leading-snug mb-2">
           New Type Smartphone Sony Xperia L1 G3311 5.5' 2/16GB Black
         </h3>
 
@@ -563,7 +569,7 @@ function GatedDealCard({ onUpgrade }) {
         </div>
 
         <CTASwitch
-          freeText="Join Now"
+          freeText="Join Now!"
           premiumText="View Deal"
           guestText="Join Free"
           onAction={!isPremium ? onUpgrade : undefined}
@@ -583,9 +589,8 @@ function GatedContactPanel({ onUpgrade }) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <BadgeCheck size={16} className="text-orange-500" />
-        <span className="text-xs font-bold text-emerald-600">Verified Seller</span>
+      <div className="mb-3">
+        <VerifiedBadge variant="inline" size={16} iconClassName="text-orange-500" />
       </div>
 
       <h3 className="text-sm font-extrabold text-slate-900 mb-2">
@@ -694,7 +699,7 @@ function GatedContactPanel({ onUpgrade }) {
             return (
               <span
                 key={day}
-                className={`px-1.5 py-1 text-[9px] font-bold rounded ${
+                className={`px-1.5 py-1 text-[10px] font-bold rounded ${
                   isToday
                     ? isOpen
                       ? "bg-emerald-500 text-white"
@@ -715,14 +720,14 @@ function GatedContactPanel({ onUpgrade }) {
       <div className="space-y-2">
         {isPremium ? (
           <>
-            <button className="w-full py-2.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+            <button className="w-full py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center justify-center gap-1.5">
               <Send size={13} /> Send Enquiry
             </button>
             <div className="grid grid-cols-2 gap-2">
-              <button className="py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
+              <button className="py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
                 View Profile
               </button>
-              <button className="py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
+              <button className="py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
                 View All Deals
               </button>
             </div>
@@ -730,9 +735,9 @@ function GatedContactPanel({ onUpgrade }) {
         ) : (
           <button
             onClick={onUpgrade}
-            className="w-full py-2.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all flex items-center justify-center gap-1.5"
+            className="w-full py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all flex items-center justify-center gap-1.5"
           >
-            <Lock size={13} /> Join Now
+            <Lock size={14} /> Join Now!
           </button>
         )}
       </div>
@@ -754,7 +759,7 @@ function GatingPatternCard({ title, description, icon: Icon, tier, children }) {
           <h3 className="text-xs font-bold text-slate-800">{title}</h3>
           <p className="text-[10px] text-slate-500">{description}</p>
         </div>
-        <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full ${
+        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
           tier === "premium" ? "bg-amber-100 text-amber-700" : tier === "auth" ? "bg-orange-100 text-orange-800" : "bg-slate-100 text-slate-600"
         }`}>
           {tier === "premium" ? "PREMIUM" : tier === "auth" ? "AUTH" : "ALL"}
@@ -785,7 +790,7 @@ export default function Phase8GatingLogic() {
                 <Tag size={14} className="text-white" />
               </div>
               <span className="text-base font-extrabold text-slate-900 tracking-tight">
-                Wholesale<span className="text-orange-500">Up</span>
+                wholesale<span className="text-orange-500">up</span>
               </span>
             </div>
 
@@ -836,7 +841,7 @@ export default function Phase8GatingLogic() {
                   Phase 8 — Gating Logic Components
                 </h2>
                 <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  Switch between <strong>Guest</strong>, <strong>Free</strong>, and <strong>Premium</strong> tiers using the toggle above to see how all gating patterns change in real-time. This phase provides 5 reusable gating primitives: <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[11px] font-mono">BlurredContent</code>, <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[11px] font-mono">LockedSection</code>, <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[11px] font-mono">PremiumGate</code>, <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[11px] font-mono">UpgradeModal</code>, and <code className="px-1.5 py-0.5 bg-slate-100 rounded text-[11px] font-mono">CTASwitch</code>.
+                  Switch between <strong>Guest</strong>, <strong>Free</strong>, and <strong>Premium</strong> tiers using the toggle above to see how all gating patterns change in real-time. This phase provides 5 reusable gating primitives: <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">BlurredContent</code>, <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">LockedSection</code>, <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">PremiumGate</code>, <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">UpgradeModal</code>, and <code className="px-1.5 py-0.5 bg-slate-100 rounded text-xs font-mono">CTASwitch</code>.
                 </p>
 
                 {/* Current Tier Status */}
@@ -962,7 +967,7 @@ export default function Phase8GatingLogic() {
                       ].map((col) => (
                         <span
                           key={col.label}
-                          className={`w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold ${
+                          className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
                             col.val
                               ? "bg-emerald-100 text-emerald-600"
                               : "bg-red-50 text-red-400"
@@ -974,7 +979,7 @@ export default function Phase8GatingLogic() {
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 text-[9px] text-slate-400">
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 text-[10px] text-slate-400">
                   <span>G=Guest</span> <span>F=Free</span> <span>P=Premium</span>
                 </div>
               </div>

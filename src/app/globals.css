@@ -10,6 +10,156 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* ── Panel flash-prevention ──
+     The inline <script> in layout.tsx runs before ANY paint and sets
+     data attributes on <html> for each collapsed panel, plus adds
+     .no-panel-transition to kill all animations during hydration.
+
+     Four collapsible panels:
+       data-sidebar-collapsed  → left nav sidebar  (w-64 → w-16)
+       data-account-collapsed  → account sidebar   (w-72 → w-16)
+       data-tips-collapsed     → tips right column  (w-72 → w-3)
+       data-filter-collapsed   → filter sidebar     (w-72 → w-0)
+
+     usePanelCollapse removes .no-panel-transition + data attributes
+     after first paint so future toggles animate normally.
+
+     The ticker uses bg-slate-900 (matching sidebar) in both states
+     to eliminate the lighter-blue flash that occurred when the server
+     rendered bg-slate-800 before these CSS overrides could take effect. */
+
+  /* 1. Kill ALL transitions during hydration */
+  .no-panel-transition *,
+  .no-panel-transition aside,
+  .no-panel-transition aside ~ * {
+    transition: none !important;
+  }
+
+  /* 2. Force left nav sidebar to collapsed width
+        IMPORTANT: target [data-panel="nav"] specifically, NOT bare `aside`,
+        to avoid clobbering the account sidebar's <aside> on dashboard pages. */
+  [data-sidebar-collapsed="1"] [data-panel="nav"],
+  [data-sidebar-collapsed="1"] [data-panel="nav"] > div {
+    width: 4rem !important;
+    min-width: 4rem !important;
+    overflow: visible !important;
+  }
+  /* Hide text labels (spans/paragraphs) inside collapsed sidebar */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] span,
+  [data-sidebar-collapsed="1"] [data-panel="nav"] p,
+  [data-sidebar-collapsed="1"] [data-panel="nav"] nav a span {
+    display: none !important;
+  }
+  /* Hide stats ticker content when collapsed but KEEP its height so icons don't shift.
+     visibility:hidden preserves layout space unlike display:none.
+     The ticker now uses bg-slate-900 (same as sidebar) in both states,
+     so there's no color to override — just hide the text. */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] [data-sidebar-ticker] {
+    visibility: hidden !important;
+  }
+  /* Hide full logo, show collapsed W icon */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] [data-sidebar-logo-full] {
+    display: none !important;
+  }
+  [data-sidebar-collapsed="1"] [data-panel="nav"] [data-sidebar-logo-collapsed] {
+    display: block !important;
+  }
+  [data-sidebar-collapsed="1"] [data-panel="nav"] [data-sidebar-logo-area] {
+    justify-content: center !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  /* Force header Row 1 to use collapsed-state padding when sidebar is collapsed,
+     preventing the "For retailers" text from shifting right-to-left on hydration. */
+  [data-sidebar-collapsed="1"] header > div:first-child > div:first-child {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  /* Force toggle chevron to collapsed rotation (-90deg = pointing right / "expand") */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] > button[class*="bg-orange-600"] svg {
+    transform: rotate(-90deg) !important;
+  }
+  /* Force toggle button shadow for collapsed state */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] > button[class*="bg-orange-600"] {
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
+  }
+  /* Force nav container to collapsed padding (server renders px-3 for expanded;
+     collapsed uses px-2 — without this the icon containers are 8px narrower). */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] nav {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  /* Force nav links to icon-only centered layout (matches collapsed React classes) */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] nav a {
+    justify-content: center !important;
+    width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 0 !important;
+  }
+  /* Force login/CTA button to collapsed icon-only size.
+     :not([class*="absolute"]) excludes the collapse toggle button
+     (which also contains "bg-orange-500" via its hover: variant). */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] > div button[class*="bg-orange-500"]:not([class*="absolute"]) {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  /* Force user card to icon-only layout */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] div[class*="bg-slate-800"].group {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  /* Force active nav link to collapsed styling (server renders expanded bg-orange-500/10;
+     collapsed state uses bg-slate-800 with a different border shade) */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] nav a[class*="bg-orange"] {
+    background-color: rgb(30 41 59) !important; /* bg-slate-800 */
+    border-color: rgba(249 115 22 / 0.3) !important; /* border-orange-500/30 */
+  }
+  /* Hide badge counters in collapsed state */
+  [data-sidebar-collapsed="1"] [data-panel="nav"] nav a span[class*="bg-orange-500"] {
+    display: none !important;
+  }
+
+  /* 3. Force account sidebar to collapsed width + swap content */
+  [data-account-collapsed="1"] [data-panel="account"],
+  [data-account-collapsed="1"] [data-panel="account"] > div,
+  [data-account-collapsed="1"] [data-panel="account"] aside {
+    width: 4rem !important;
+    min-width: 4rem !important;
+    overflow: hidden !important;
+  }
+  /* Show collapsed-state content (first child: mini icons) */
+  [data-account-collapsed="1"] [data-panel="account"] aside > div:first-child {
+    opacity: 1 !important;
+    height: auto !important;
+  }
+  /* Hide expanded-state content (second child: full profile card) */
+  [data-account-collapsed="1"] [data-panel="account"] aside > div:nth-child(2) {
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 4. Force tips panel to collapsed width */
+  [data-tips-collapsed="1"] [data-panel="tips"] {
+    width: 0.75rem !important;
+    min-width: 0.75rem !important;
+    overflow: hidden !important;
+  }
+
+  /* 5. Force filter sidebar to collapsed width */
+  [data-filter-collapsed="1"] [data-panel="filter"] > div:first-child {
+    width: 0 !important;
+    overflow: hidden !important;
+  }
 }
 
 /* Sidebar rotating stats animation */
@@ -23,6 +173,45 @@
 .animate-slideUp {
   animation: slideUp 3s ease-in-out;
 }
+
+/* Tab panel fade-in transition */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* ── Reduced motion: respect user preference (WCAG 2.1 SC 2.3.3) ── */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slideUp,
+  .animate-spin {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ── Browser autofill: override Chrome/Safari blue background ── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  -webkit-text-fill-color: #1e293b !important; /* text-slate-800 */
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Hide default reCAPTCHA v3 floating badge — attribution shown inline instead */
+.grecaptcha-badge { visibility: hidden !important; }
 
 @layer utilities {
   .line-clamp-2 {
@@ -43,5 +232,24 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Thin custom scrollbar — subtle slate on dark backgrounds */
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100,116,139,0.4) transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 3px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100,116,139,0.4);
+    border-radius: 3px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(148,163,184,0.5);
   }
 }

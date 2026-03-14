@@ -1,240 +1,598 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useDemoAuth } from "@/components/shared/demo-auth-context";
+import { usePanelCollapse } from "@/components/shared/use-panel-collapse";
+import Breadcrumb from "@/components/shared/breadcrumb";
 import {
-  Tag,
   User,
   ShoppingBag,
   Store,
   Package,
-  MessageSquare,
   Heart,
-  Coins,
-  Settings,
   Crown,
-  Pencil,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-  X,
-  ChevronDown,
-  Check,
-  Search,
-  Globe,
-  Phone,
-  Mail,
-  Building2,
-  MapPin,
-  Languages,
-  Bell,
-  Lock,
-  Unlock,
   Sparkles,
   ArrowRight,
   Shield,
-  FileText,
-  PlusCircle,
-  Headphones,
-  LayoutDashboard,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  Camera,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
+import { DASHBOARD_NAV_SECTIONS, DASHBOARD_NAV_LINKS } from "@/lib/dashboard-nav";
 
-/* ─────────── Mock Users ─────────── */
-const USERS = {
-  female: { firstName: "Jennifer", lastName: "Lawrence", initials: "JL", tier: "STANDARD", expiresOn: "9 Jan 2025", pin: "2017", gender: "female" },
-  male: { firstName: "Anand", lastName: "Kumar", initials: "AK", tier: "PREMIUM", expiresOn: "15 Mar 2026", pin: "3042", gender: "male" },
+/* ─────────── Mock Users (H9) ────────────────────────────────
+   PRODUCTION: Remove USERS constant entirely. User data comes
+   from the NextAuth session via useSession() → session.user.
+   Profile data: GET /api/user/profile for extended fields.
+   Profile updates: PUT /api/user/profile
+   ─────────────────────────────────────────────────────────── */
+export const USERS = {
+  "free":              { firstName: "Sarah",    lastName: "Mitchell",    initials: "SM", tier: "FREE",         expiresOn: null,            gender: "female", isSupplier: false, memberSince: "Mar 2024", listingsCount: null },
+  "standard":          { firstName: "Jennifer", lastName: "Lawrence",    initials: "JL", tier: "STANDARD",     expiresOn: "9 Jan 2027",    gender: "female", isSupplier: false, memberSince: "Jun 2023", listingsCount: null },
+  "premium":           { firstName: "Anand",    lastName: "Kumar",       initials: "AK", tier: "PREMIUM",      expiresOn: "15 Sep 2026",   gender: "male",   isSupplier: false, memberSince: "Jan 2023", listingsCount: null },
+  "premium-plus":      { firstName: "Michael",  lastName: "Chen",        initials: "MC", tier: "PREMIUM+",     expiresOn: "20 Dec 2026",   gender: "male",   isSupplier: false, memberSince: "Nov 2022", listingsCount: null },
+  "supplier-free":     { firstName: "Lisa",     lastName: "Thompson",    initials: "LT", tier: "SUPPLIER",     expiresOn: null,            gender: "female", isSupplier: true,  memberSince: "Feb 2024", listingsCount: 3 },
+  "supplier-premium":  { firstName: "David",    lastName: "Richardson",  initials: "DR", tier: "SUPPLIER PRO", expiresOn: "28 Feb 2027",   gender: "male",   isSupplier: true,  memberSince: "Aug 2023", listingsCount: 24 },
 };
 
-/* ─────────── Phone Codes ─────────── */
-const PHONE_CODES = [
-  { country: "United States", code: "+1", flag: "🇺🇸" },
-  { country: "United Kingdom", code: "+44", flag: "🇬🇧" },
-  { country: "Canada", code: "+1", flag: "🇨🇦" },
-  { country: "Australia", code: "+61", flag: "🇦🇺" },
-  { country: "Germany", code: "+49", flag: "🇩🇪" },
-  { country: "France", code: "+33", flag: "🇫🇷" },
-  { country: "Italy", code: "+39", flag: "🇮🇹" },
-  { country: "Spain", code: "+34", flag: "🇪🇸" },
-  { country: "Netherlands", code: "+31", flag: "🇳🇱" },
-  { country: "Belgium", code: "+32", flag: "🇧🇪" },
-  { country: "Switzerland", code: "+41", flag: "🇨🇭" },
-  { country: "Austria", code: "+43", flag: "🇦🇹" },
-  { country: "Sweden", code: "+46", flag: "🇸🇪" },
-  { country: "Norway", code: "+47", flag: "🇳🇴" },
-  { country: "Denmark", code: "+45", flag: "🇩🇰" },
-  { country: "Poland", code: "+48", flag: "🇵🇱" },
-  { country: "Ireland", code: "+353", flag: "🇮🇪" },
-  { country: "Portugal", code: "+351", flag: "🇵🇹" },
-  { country: "Greece", code: "+30", flag: "🇬🇷" },
-];
+/* ─────────── Tier Config — styling per tier ──────────────── */
+export const TIER_CONFIG = {
+  "FREE":         { gradient: "from-slate-400 to-slate-600",    badgeBg: "bg-slate-100",   badgeText: "text-slate-600",   avatarBg: "bg-slate-500",   icon: User,        cardGradient: "from-blue-500 via-blue-600 to-indigo-700",     ctaText: "text-orange-600",  ctaHover: "hover:bg-orange-50",  bannerGradient: "from-blue-600 via-indigo-500 via-35% to-orange-500",    bannerSubtext: "text-blue-100",  bannerLabel: "text-blue-200" },
+  "STANDARD":     { gradient: "from-blue-500 to-indigo-600",    badgeBg: "bg-blue-100",    badgeText: "text-blue-700",    avatarBg: "bg-blue-500",    icon: ShoppingBag, cardGradient: "from-purple-600 via-indigo-500 to-violet-700",   ctaText: "text-orange-600",  ctaHover: "hover:bg-orange-50",  bannerGradient: "from-violet-600 via-purple-500 via-40% to-orange-500", bannerSubtext: "text-purple-100", bannerLabel: "text-purple-200" },
+  "PREMIUM":      { gradient: "from-amber-500 to-orange-600",   badgeBg: "bg-amber-100",   badgeText: "text-amber-700",   avatarBg: "bg-amber-500",   icon: Crown,       cardGradient: "from-amber-500 via-orange-600 to-rose-600",    ctaText: "text-orange-600",  ctaHover: "hover:bg-orange-50",  bannerGradient: "from-orange-500 via-rose-500 via-40% to-purple-600",  bannerSubtext: "text-orange-100", bannerLabel: "text-orange-200" },
+  "PREMIUM+":     { gradient: "from-orange-500 to-rose-600",    badgeBg: "bg-orange-100",  badgeText: "text-orange-700",  avatarBg: "bg-orange-500",  icon: Sparkles,    cardGradient: "from-orange-500 via-rose-600 to-purple-700",   ctaText: "text-rose-600",    ctaHover: "hover:bg-rose-50",    bannerGradient: "from-orange-500 via-rose-600 to-purple-700",   bannerSubtext: "text-orange-100", bannerLabel: "text-orange-200" },
+  "SUPPLIER":     { gradient: "from-emerald-500 to-teal-600",   badgeBg: "bg-emerald-100", badgeText: "text-emerald-700", avatarBg: "bg-emerald-500", icon: Store,       cardGradient: "from-emerald-500 via-emerald-600 to-teal-700", ctaText: "text-emerald-600", ctaHover: "hover:bg-emerald-50", bannerGradient: "from-emerald-500 via-teal-600 to-cyan-600",     bannerSubtext: "text-emerald-100", bannerLabel: "text-emerald-200" },
+  "SUPPLIER PRO": { gradient: "from-violet-500 to-indigo-600",  badgeBg: "bg-purple-100",  badgeText: "text-purple-700",  avatarBg: "bg-violet-500",  icon: Store,       cardGradient: "from-violet-500 via-purple-600 to-indigo-700", ctaText: "text-purple-600",  ctaHover: "hover:bg-purple-50",  bannerGradient: "from-violet-500 via-purple-600 to-indigo-700", bannerSubtext: "text-purple-100", bannerLabel: "text-purple-200" },
+};
 
-const LANGUAGES = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Chinese", "Japanese", "Korean", "Arabic"];
+/* CTA config per tier */
+export const TIER_CTA = {
+  "FREE":         { label: "Upgrade to Standard",      primary: true,  bannerCta: "Upgrade to Standard Now!" },
+  "STANDARD":     { label: "Upgrade to Premium",       primary: false, bannerCta: "Upgrade to Premium Now!" },
+  "PREMIUM":      { label: "Upgrade to Premium+",      primary: false, bannerCta: "Upgrade to Premium+ Now!" },
+  "PREMIUM+":     { label: "Renew Subscription",       primary: false, bannerCta: "Renew Now!" },
+  "SUPPLIER":     { label: "Upgrade to Supplier Pro",  primary: true,  bannerCta: "Upgrade to Supplier Pro Now!" },
+  "SUPPLIER PRO": { label: "Manage Subscription",      primary: false, bannerCta: "Manage Subscription" },
+};
 
-const COUNTRIES = [
-  "United Kingdom", "United States", "Germany", "France", "Italy", "Spain",
-  "Netherlands", "Belgium", "Canada", "Australia", "Poland", "Sweden",
-  "Norway", "Denmark", "Ireland", "Portugal", "Greece", "Austria", "Switzerland",
-];
-
-/* ─────────── Dropdown Hook ─────────── */
-function useDropdown() {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-  return { open, setOpen, ref };
-}
+/* Banner headline + subtitle per tier — shows what the NEXT tier unlocks */
+const TIER_BANNER_COPY = {
+  "FREE":     { headline: "20,530+ Live Wholesale Deals",        subtitle: "Unlock Live Wholesale & Dropship Deals, profit calculators & weekly newsletter" },
+  "STANDARD": { headline: "47,400+ Verified Suppliers",          subtitle: "Unlock the full supplier database, liquidators & dropship directories" },
+  "PREMIUM":  { headline: "Unlimited Enquiries & VIP Support",   subtitle: "Unlock supplier reviews, daily deals & custom sourcing guarantee" },
+  "SUPPLIER": { headline: "Unlimited Listings & Top Visibility", subtitle: "Get listing support, reach Free-tier buyers & priority placement" },
+};
 
 /* ═══════════════════════════════════════════════════
-   ACCOUNT SIDEBAR
+   SIDEBAR AVATAR UPLOAD — avatar component with upload
    ═══════════════════════════════════════════════════ */
-function AccountSidebar({ user, activePage = "account-profile" }) {
-  const sections = [
-    {
-      title: "MANAGE ACCOUNT",
-      items: [
-        { id: "account-profile", icon: User, label: "Account Profile" },
-        { id: "buyer-profile", icon: ShoppingBag, label: "Buyer Profile" },
-        { id: "supplier-profile", icon: Store, label: "Supplier Profile" },
-      ],
-    },
-    {
-      title: "DEALS MENU",
-      items: [
-        { id: "manage-deals", icon: Package, label: "Manage Deals" },
-        { id: "orders", icon: ShoppingBag, label: "Orders" },
-        { id: "messages", icon: MessageSquare, label: "Messages", badge: 3 },
-        { id: "favourites", icon: Heart, label: "My Favourites" },
-      ],
-    },
-    {
-      title: "OTHER",
-      items: [
-        { id: "affiliate", icon: Coins, label: "Affiliate Earnings" },
-        { id: "billing", icon: Settings, label: "Manage Services & Billing" },
-      ],
-    },
-  ];
+function SidebarAvatarUpload({ children, className = "" }) {
+  const [avatar, setAvatar] = useState(null);
+  const fileRef = useRef(null);
+
+  const handleFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return; // 5MB max
+    const reader = new FileReader();
+    reader.onload = (e) => setAvatar(e.target.result);
+    reader.readAsDataURL(file);
+    // PRODUCTION: POST /api/user/avatar with FormData
+  };
 
   return (
-    <aside className="w-72 shrink-0 hidden lg:block">
-      {/* User Card */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4 shadow-sm">
-        <div className={`relative pt-5 pb-10 text-center ${
-          user.gender === "male"
-            ? "bg-gradient-to-br from-indigo-500 to-violet-600"
-            : "bg-gradient-to-br from-orange-500 to-orange-700"
-        }`}>
-          <div className="absolute inset-0 opacity-20" style={{
-            backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
-            backgroundSize: "16px 16px"
-          }} />
-        </div>
-        <div className="px-5 pb-4 -mt-8 relative">
-          <div className="w-16 h-16 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center mx-auto">
-            <div className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-lg ${
-              user.gender === "male" ? "bg-indigo-500" : "bg-orange-500"
-            }`}>
-              {user.initials}
-            </div>
+    <div className="relative group flex flex-col items-center">
+      {/* The avatar circle */}
+      <div
+        className={`relative cursor-pointer transition-transform duration-200 group-hover:scale-105 ${className}`}
+        onClick={() => fileRef.current?.click()}
+        role="button"
+        aria-label="Upload profile photo"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileRef.current?.click(); } }}
+      >
+        {avatar ? (
+          <Image src={avatar} alt="Profile" fill className="rounded-full object-cover" sizes="100%" />
+        ) : (
+          children
+        )}
+        {/* Camera overlay — only on hover */}
+        <div className="absolute inset-0 rounded-full bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[1]">
+          <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30">
+            <Camera size={14} className="text-white" />
           </div>
-          <h3 className="text-center font-bold text-slate-900 mt-2">
-            {user.firstName} {user.lastName}
-          </h3>
-          <div className="flex items-center justify-center mt-1.5">
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-              user.tier === "PREMIUM"
-                ? "bg-amber-100 text-amber-700"
-                : "bg-slate-100 text-slate-600"
-            }`}>
-              <Crown size={10} />
-              {user.tier}
-            </span>
-          </div>
-          <div className="mt-3 space-y-1.5 text-xs text-slate-500">
-            <div className="flex items-center justify-between px-1">
-              <span>Account Expires On</span>
-              <span className="font-semibold text-slate-700">{user.expiresOn}</span>
-            </div>
-            <div className="flex items-center justify-between px-1">
-              <span>PIN Number</span>
-              <span className="font-semibold text-slate-700">{user.pin}</span>
-            </div>
-          </div>
-          <a href="/pricing" className="block mt-3 w-full py-2.5 text-center text-xs font-bold text-orange-600 border border-orange-200 hover:bg-orange-50 rounded-lg transition-colors">
-            Renew Account
-          </a>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        {sections.map((section, si) => (
-          <div key={section.title}>
-            {si > 0 && <div className="h-px bg-slate-100" />}
-            <p className="px-4 pt-3 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              {section.title}
-            </p>
-            {section.items.map((item) => {
-              const isActive = activePage === item.id;
-              return (
-                <button
-                  key={item.id}
-                  className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors text-left ${
-                    isActive
-                      ? "text-orange-600 bg-orange-50 font-semibold border-r-2 border-orange-500"
-                      : "text-slate-600 hover:text-orange-600 hover:bg-slate-50"
-                  }`}
-                >
-                  <item.icon size={16} className={isActive ? "text-orange-500" : "text-slate-400"} />
-                  <span className="flex-1">{item.label}</span>
-                  {item.badge && (
-                    <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-    </aside>
+      {/* Upload envelope — slides up with solid backdrop to avoid text bleed */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-[calc(100%-4px)] opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300 ease-out pointer-events-none z-50">
+        <div className="bg-slate-800/85 backdrop-blur-sm rounded-xl shadow-xl pt-3 pb-2.5 px-4 text-center whitespace-nowrap border border-white/15">
+          <p className="text-[11px] text-white font-semibold">Click to upload</p>
+          <p className="text-[10px] text-white/60 mt-0.5">JPG, PNG or WebP. Max 5 MB</p>
+        </div>
+      </div>
+
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+    </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════
-   UPGRADE BANNER — top of dashboard content
+   SIDEBAR NAV TOOLTIP — collapsed sidebar tooltip
    ═══════════════════════════════════════════════════ */
-function UpgradeBanner({ user }) {
-  if (user.tier === "PREMIUM") return null;
+function SidebarNavTooltip({ children, label, collapsed, isActive, icon: Icon, href, badge }) {
+  const [show, setShow] = useState(false);
+  if (!collapsed) return children;
+  return (
+    <div className="relative" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <div className={show ? "invisible" : ""}>{children}</div>
+      {show && (
+        <Link
+          href={href}
+          className={`absolute left-0 top-0 bottom-0 flex items-center gap-2.5 px-3 rounded-lg whitespace-nowrap z-[60] text-sm font-semibold shadow-lg transition-colors cursor-pointer ${
+            isActive
+              ? "bg-white text-orange-600 border border-orange-200"
+              : "bg-white text-slate-700 border border-slate-200 hover:text-orange-600"
+          }`}
+        >
+          {Icon && <Icon size={16} className={isActive ? "text-orange-500 shrink-0" : "text-slate-400 shrink-0"} />}
+          {label}
+          {badge && <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{badge}</span>}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/* ── Sidebar mini circular progress ring ── */
+function SidebarProfileRing({ pct }) {
+  const r = 16, stroke = 3.5, size = (r + stroke) * 2;
+  const cx = r + stroke, cy = r + stroke;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  return (
+    <svg width={size} height={size} className="shrink-0 -rotate-90">
+      {/* Track ring */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={stroke} />
+      {/* Progress arc — always white, high contrast on any tier gradient */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="white" strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-500" />
+      {/* Percentage label */}
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+        fill="white" fontSize="10" fontWeight="700"
+        transform={`rotate(90, ${cx}, ${cy})`}>{pct}%</text>
+    </svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ACCOUNT SIDEBAR — User card + nav
+   ═══════════════════════════════════════════════════ */
+export function AccountSidebar({ user, activePage = "account-profile", collapsed = false, onToggle, profilePct: profilePctProp, accountPct: accountPctProp, profileSavedAt }) {
+  /* ── Auto-collapse between md (768px) and xl (1280px) ──
+     Start false to match SSR, then sync on mount to avoid hydration mismatch */
+  const [forceCollapsed, setForceCollapsed] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 768px) and (max-width: 1279px)");
+    setForceCollapsed(mql.matches);
+    const handler = (e) => setForceCollapsed(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  const isCollapsed = forceCollapsed || collapsed;
+
+  const sections = DASHBOARD_NAV_SECTIONS;
+
+  const tc = TIER_CONFIG[user.tier] || TIER_CONFIG["FREE"];
+  const TierIcon = tc.icon;
+  const cta = TIER_CTA[user.tier] || TIER_CTA["FREE"];
+  const hasSub = !!user.expiresOn;
+
+  /* ── Profile completeness + staleness from localStorage (or live props) ── */
+  const STALE_THRESHOLD = 30; // days
+
+  // Account Profile panel
+  const [storedAccountPct, setStoredAccountPct] = useState(null);
+  const [accountDaysStale, setAccountDaysStale] = useState(null);
+  const [accountLastUpdated, setAccountLastUpdated] = useState(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("wup-account-profile-pct");
+      if (raw != null) setStoredAccountPct(parseInt(raw, 10));
+      const ts = localStorage.getItem("wup-account-profile-last-saved");
+      if (ts) {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) {
+          setAccountLastUpdated(d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }));
+          setAccountDaysStale(Math.floor((Date.now() - d.getTime()) / 86_400_000));
+        }
+      }
+    } catch {}
+  }, []);
+  const accountPct = (accountPctProp != null && activePage === "account-profile") ? accountPctProp : storedAccountPct;
+
+  // Buyer/Supplier Profile panel
+  const profileKey = user.isSupplier ? "supplier" : "buyer";
+  const profileLabel = user.isSupplier ? "Supplier Profile" : "Buyer Profile";
+  const profileHref = user.isSupplier ? "/dashboard/supplier-profile" : "/dashboard/buyer-profile";
+  const [storedPct, setStoredPct] = useState(null);
+  const [profileDaysStale, setProfileDaysStale] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`wup-${profileKey}-profile-pct`);
+      if (raw != null) setStoredPct(parseInt(raw, 10));
+      const ts = localStorage.getItem(`wup-${profileKey}-profile-last-saved`);
+      if (ts) {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) {
+          setLastUpdated(d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }));
+          setProfileDaysStale(Math.floor((Date.now() - d.getTime()) / 86_400_000));
+        }
+      } else {
+        setLastUpdated(null);
+        setProfileDaysStale(null);
+      }
+    } catch {}
+  }, [profileKey, profileSavedAt]);
+  /* Only apply live prop when the active page matches the profile type, to avoid cross-contamination */
+  const profilePageMatch = (profileKey === "buyer" && activePage === "buyer-profile") || (profileKey === "supplier" && activePage === "supplier-profile");
+  const profilePct = (profilePctProp != null && profilePageMatch) ? profilePctProp : storedPct;
+
+  /* ── Single container with smooth width transition ── */
+  return (
+    <div data-panel="account" className="hidden md:block relative shrink-0 sticky self-start z-20" style={{ top: 110 }}>
+      <div
+        className={`transition-all duration-300 ease-in-out ${isCollapsed ? "w-16" : "w-72"} ${isCollapsed ? "overflow-visible" : "overflow-y-auto overflow-x-hidden scrollbar-hide"}`}
+        style={{ maxHeight: "calc(100vh - 120px)" }}
+      >
+        <aside className={`transition-all duration-300 ease-in-out ${isCollapsed ? "w-16" : "w-72"}`}>
+
+          {/* ── Collapsed content ── */}
+          <div className={`transition-all duration-300 ease-in-out ${isCollapsed ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden pointer-events-none"}`}>
+            {/* Mini avatar — with edit overlay */}
+            <div className="flex flex-col items-center">
+              <div className="mb-3 pt-2">
+                <SidebarAvatarUpload className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-md ${tc.avatarBg}`}>
+                  <div className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-xs ${tc.avatarBg}`}>
+                    {user.initials}
+                  </div>
+                </SidebarAvatarUpload>
+              </div>
+              <div className="w-8 h-px bg-slate-200 mb-2" />
+
+              {/* Nav icons with tooltips */}
+              <nav className="flex flex-col items-center w-full" aria-label="Dashboard navigation">
+                {sections.map((section, si) => (
+                  <div key={section.title} className="w-full">
+                    {si > 0 && <div className="w-8 h-px bg-slate-200 mx-auto my-1.5" />}
+                    {section.items.map((item) => {
+                      const isActive = activePage === item.id;
+                      return (
+                        <SidebarNavTooltip
+                          key={item.id}
+                          label={item.label}
+                          collapsed={true}
+                          isActive={isActive}
+                          icon={item.icon}
+                          href={item.href}
+                          badge={item.badge}
+                        >
+                          <Link
+                            href={item.href}
+                            className={`relative w-full flex items-center justify-center py-2.5 transition-colors ${
+                              isActive ? "text-orange-500" : "text-slate-400 hover:text-orange-500"
+                            }`}
+                            aria-current={isActive ? "page" : undefined}
+                            aria-label={item.label}
+                          >
+                            <item.icon size={18} />
+                            {item.badge && (
+                              <span className="absolute top-1 right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        </SidebarNavTooltip>
+                      );
+                    })}
+                  </div>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          {/* ── Expanded content ── */}
+          <div className={`transition-all duration-300 ease-in-out ${isCollapsed ? "opacity-0 h-0 overflow-hidden pointer-events-none" : "opacity-100 h-auto"}`}>
+            {/* User Card — tier-colored gradient + decorative circles + glassmorphism */}
+            <div className={`relative rounded-xl overflow-hidden mb-4 shadow-lg bg-gradient-to-br ${tc.cardGradient}`}>
+              {/* Decorative white circles — same as UpgradeBanner */}
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                <div className="absolute -top-16 -right-10 w-44 h-44 bg-white rounded-full" />
+                <div className="absolute bottom-8 -left-8 w-32 h-32 bg-white rounded-full" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-52 h-52 bg-white rounded-full" />
+              </div>
+
+              <div className="relative px-4 pt-6 pb-4">
+                {/* Avatar — solid white ring, tier-colored inner, upload on hover */}
+                <SidebarAvatarUpload className="w-16 h-16 rounded-full bg-white border-[3px] border-white shadow-lg flex items-center justify-center">
+                  <div className={`w-full h-full rounded-full flex items-center justify-center text-white font-bold text-lg ${tc.avatarBg}`}>
+                    {user.initials}
+                  </div>
+                </SidebarAvatarUpload>
+
+                {/* Name */}
+                <h3 className="text-center font-bold text-white mt-2.5 whitespace-nowrap drop-shadow-sm">
+                  {user.firstName} {user.lastName}
+                </h3>
+
+                {/* Tier badge — bg-white/20 backdrop-blur matching UpgradeBanner icon container */}
+                <div className="flex items-center justify-center mt-1.5">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-sm text-white border border-white/20">
+                    <TierIcon size={11} />
+                    {user.tier}
+                  </span>
+                </div>
+
+                {/* Details panel — bg-white/20 backdrop-blur matching UpgradeBanner */}
+                <div className="mt-3 bg-white/20 backdrop-blur-sm border border-white/20 rounded-xl p-3 space-y-2 text-[13px]">
+                  {hasSub && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-white/80"><Calendar size={13} />Expires</span>
+                        <span className="font-semibold text-white">{user.expiresOn}</span>
+                      </div>
+                    </>
+                  )}
+                  {user.memberSince && (
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-white/80"><Calendar size={13} />Member</span>
+                      <span className="font-semibold text-white">since {user.memberSince}</span>
+                    </div>
+                  )}
+                  {user.isSupplier && user.listingsCount != null && (
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-white/80"><Package size={13} />Listings</span>
+                      <span className="font-semibold text-white">{user.listingsCount}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Account Profile panel — always shown; hidden only if 100% AND fresh ── */}
+                {(() => {
+                  const pct = accountPct ?? 0;
+                  const isStale = accountDaysStale != null && accountDaysStale >= STALE_THRESHOLD;
+                  const isActive = activePage === "account-profile";
+                  if (pct === 100 && !isStale) return null;
+                  return (
+                    <Link
+                      href="/dashboard/account-profile"
+                      className={`mt-3 flex items-center gap-3 backdrop-blur-sm border rounded-xl p-3 group transition-colors ${
+                        isActive
+                          ? "bg-white/35 border-white/40 ring-1 ring-white/30"
+                          : isStale
+                          ? "bg-amber-500/70 border-amber-400/80 hover:bg-amber-500/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
+                          : "bg-white/20 border-white/20 hover:bg-white/30"
+                      }`}
+                    >
+                      <SidebarProfileRing pct={pct} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white leading-tight">
+                          {pct === 100 ? "Account Profile complete" : `Account Profile ${pct}%`}
+                        </p>
+                        <p className="text-xs text-white/70 leading-tight mt-0.5">
+                          {isStale
+                            ? `Stale — ${accountDaysStale}d ago`
+                            : accountLastUpdated ? `Updated ${accountLastUpdated}` : "Tap to complete"}
+                        </p>
+                      </div>
+                      <ArrowRight size={14} className="text-white/50 group-hover:text-white/80 transition-colors shrink-0" />
+                    </Link>
+                  );
+                })()}
+
+                {/* ── Buyer / Supplier Profile panel — always shown; hidden only if 100% AND fresh ── */}
+                {(() => {
+                  const pct = profilePct ?? 0;
+                  const isStale = profileDaysStale != null && profileDaysStale >= STALE_THRESHOLD;
+                  const isActive = profilePageMatch && (activePage === "buyer-profile" || activePage === "supplier-profile");
+                  if (pct === 100 && !isStale) return null;
+                  return (
+                    <Link
+                      href={profileHref}
+                      className={`mt-3 flex items-center gap-3 backdrop-blur-sm border rounded-xl p-3 group transition-colors ${
+                        isActive
+                          ? "bg-white/35 border-white/40 ring-1 ring-white/30"
+                          : isStale
+                          ? "bg-amber-500/70 border-amber-400/80 hover:bg-amber-500/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]"
+                          : "bg-white/20 border-white/20 hover:bg-white/30"
+                      }`}
+                    >
+                      <SidebarProfileRing pct={pct} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white leading-tight">
+                          {pct === 100 ? `${profileLabel} complete` : `${profileLabel} ${pct}%`}
+                        </p>
+                        <p className="text-xs text-white/70 leading-tight mt-0.5">
+                          {isStale
+                            ? `Stale — ${profileDaysStale}d ago`
+                            : lastUpdated ? `Updated ${lastUpdated}` : "Tap to complete"}
+                        </p>
+                      </div>
+                      <ArrowRight size={14} className="text-white/50 group-hover:text-white/80 transition-colors shrink-0" />
+                    </Link>
+                  );
+                })()}
+
+                {/* CTA button — solid white matching UpgradeBanner */}
+                <Link
+                  href="/pricing"
+                  className={`block mt-3 w-full py-2.5 text-center text-sm font-bold rounded-lg transition-colors whitespace-nowrap bg-white ${tc.ctaHover} ${tc.ctaText} shadow-sm`}
+                >
+                  {cta.label}
+                </Link>
+              </div>
+            </div>
+
+            {/* Navigation */}
+            <nav className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm" aria-label="Dashboard navigation">
+              {sections.map((section, si) => (
+                <div key={section.title}>
+                  {si > 0 && <div className="h-px bg-slate-100" />}
+                  <p className="px-4 pt-3 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                    {section.title}
+                  </p>
+                  {section.items.map((item) => {
+                    const isActive = activePage === item.id;
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors whitespace-nowrap ${
+                          isActive
+                            ? "text-orange-600 bg-orange-50 font-semibold border-r-2 border-orange-500"
+                            : "text-slate-600 hover:text-orange-600 hover:bg-slate-50"
+                        }`}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        <item.icon size={16} className={isActive ? "text-orange-500" : "text-slate-400"} />
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
+          </div>
+
+        </aside>
+      </div>
+      {/* Toggle button — hidden at md-to-lg when auto-collapsed */}
+      {!forceCollapsed && (
+        <button
+          onClick={onToggle}
+          className={`absolute top-[52px] -right-4 w-4 h-14 bg-orange-600 hover:bg-orange-500 rounded-r-lg flex items-center justify-center transition-all z-10 ${isCollapsed ? "shadow-[2px_2px_4px_rgba(0,0,0,0.2)]" : ""}`}
+          title={isCollapsed ? "Show sidebar" : "Hide sidebar"}
+        >
+          <ChevronDown size={14} className={`text-white transition-transform duration-300 ${isCollapsed ? "-rotate-90" : "rotate-90"}`} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* DASHBOARD NAV LINKS — imported from @/lib/dashboard-nav */
+
+/* ═══════════════════════════════════════════════════
+   MOBILE DASHBOARD NAV — "Go to:" dropdown below md
+   Shows when AccountSidebar is completely hidden
+   ═══════════════════════════════════════════════════ */
+export function MobileDashboardNav({ activePage = "dashboard" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const active = DASHBOARD_NAV_LINKS.find((l) => l.id === activePage) || DASHBOARD_NAV_LINKS[0];
+  const ActiveIcon = active.icon;
+
+  /* Close on outside click */
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
 
   return (
-    <div className="relative bg-gradient-to-r from-orange-600 via-orange-700 to-indigo-600 rounded-xl overflow-hidden shadow-lg mb-6">
-      {/* Background Pattern */}
+    <div ref={ref} className="md:hidden mb-4 relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <ActiveIcon size={16} className="text-slate-400" />
+          Go to: {active.label}
+        </span>
+        <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 right-0 -mt-px bg-white border border-slate-200 rounded-lg shadow-lg z-[50]">
+          {DASHBOARD_NAV_LINKS.map((link, i) => {
+            const isActive = link.id === activePage;
+            const Icon = link.icon;
+            return (
+              <div key={link.id}>
+                {i > 0 && <div className="h-px bg-slate-100" />}
+                <Link
+                  href={link.href}
+                  className={`block w-full px-4 py-2.5 text-sm transition-colors ${
+                    isActive
+                      ? "text-orange-600 bg-orange-50 font-semibold"
+                      : "text-slate-600 hover:text-orange-600 hover:bg-slate-50"
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Icon size={16} className={isActive ? "text-orange-500" : "text-slate-400"} />
+                    {link.label}
+                    {link.badge && (
+                      <span className="ml-auto w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                        {link.badge}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   UPGRADE BANNER — tier-specific upgrade CTA
+   ═══════════════════════════════════════════════════ */
+export function UpgradeBanner({ user }) {
+  const topTiers = ["PREMIUM+", "SUPPLIER PRO"];
+  if (topTiers.includes(user.tier)) return null;
+  const tc = TIER_CONFIG[user.tier] || TIER_CONFIG["FREE"];
+  const cta = TIER_CTA[user.tier] || TIER_CTA["FREE"];
+  const copy = TIER_BANNER_COPY[user.tier] || TIER_BANNER_COPY["FREE"];
+  return (
+    <div className={`relative bg-gradient-to-r ${tc.bannerGradient} rounded-xl overflow-hidden shadow-lg mb-6`}>
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/4" />
         <div className="absolute bottom-0 left-1/3 w-48 h-48 bg-white rounded-full translate-y-1/2" />
       </div>
-      <div className="relative flex items-center justify-between px-6 py-5 gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
-            <Sparkles size={28} className="text-white" />
+      <div className="relative flex items-center justify-between px-5 py-4 lg:px-6 lg:py-5 gap-4">
+        <div className="flex items-center gap-3 lg:gap-4 min-w-0">
+          <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+            <Sparkles size={24} className="text-white lg:hidden" />
+            <Sparkles size={28} className="text-white hidden lg:block" />
           </div>
           <div>
-            <p className="text-2xl font-extrabold text-white">49,100</p>
-            <p className="text-orange-100 text-sm">Wholesalers, Liquidators, & Dropshippers</p>
+            <p className="text-xl lg:text-2xl font-extrabold text-white">{copy.headline}</p>
+            <p className={`${tc.bannerSubtext} text-xs lg:text-sm`}>{copy.subtitle}</p>
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs text-orange-200 mb-1.5">Not yet Subscribed?</p>
-          <a href="/pricing" className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-white text-orange-600 font-bold text-sm rounded-lg hover:bg-orange-50 transition-colors shadow-sm">
-            Upgrade Now!
-            <ArrowRight size={14} />
-          </a>
+          <p className="text-xs text-white/80 font-medium mb-1.5 hidden lg:block">Unlock All Features</p>
+          <Link href="/pricing" className={`group inline-flex items-center gap-2 px-4 py-2.5 lg:px-6 lg:py-3 bg-white ${tc.ctaText} font-bold text-xs lg:text-sm rounded-xl ${tc.ctaHover} transition-all duration-200 shadow-lg shadow-black/15 hover:shadow-xl hover:shadow-black/20 hover:scale-[1.03] active:scale-95 ring-1 ring-white/30 whitespace-nowrap`}>
+            {cta.bannerCta}
+            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+          </Link>
         </div>
       </div>
     </div>
@@ -242,556 +600,142 @@ function UpgradeBanner({ user }) {
 }
 
 /* ═══════════════════════════════════════════════════
-   VALIDATION ERROR BANNER
+   SHARED — session → user helper
    ═══════════════════════════════════════════════════ */
-function ValidationErrorBanner({ errors, onDismiss }) {
-  if (!errors || errors.length === 0) return null;
-
-  return (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 animate-in fade-in slide-in-from-top-2 duration-300">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
-          <AlertTriangle size={16} className="text-red-500" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-red-800">Profile can't be updated</h3>
-            <button onClick={onDismiss} className="w-6 h-6 rounded-full hover:bg-red-100 flex items-center justify-center transition-colors">
-              <X size={14} className="text-red-400" />
-            </button>
-          </div>
-          <ul className="mt-2 space-y-1">
-            {errors.map((err, i) => (
-              <li key={i} className="text-xs text-red-600 flex items-start gap-1.5">
-                <span className="font-semibold text-red-700">{err.field}:</span>
-                <span>{err.message}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
+export function usePageUser() {
+  const { data: session } = useSession();
+  const { demoRole } = useDemoAuth();
+  const sessionUser = useMemo(() => {
+    if (!session?.user) return null;
+    const { user } = session;
+    const firstName = user.name?.split(" ")[0] || "";
+    const lastName = user.name?.split(" ").slice(1).join(" ") || "";
+    return {
+      firstName,
+      lastName,
+      initials: `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "U",
+      tier: (user.tier || "free").toUpperCase(),
+      expiresOn: user.tierExpiresAt
+        ? new Date(user.tierExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+        : null,
+      email: user.email || "",
+      gender: "female",
+      isSupplier: false,
+      memberSince: null,
+      listingsCount: null,
+    };
+  }, [session]);
+  // PRODUCTION: Remove demo user fallback — use sessionUser directly
+  // Demo mode: pick user by demoRole; fall back to "standard" persona
+  const demoUser = demoRole && USERS[demoRole] ? USERS[demoRole] : USERS["standard"];
+  const user = sessionUser || demoUser;
+  return user;
 }
 
 /* ═══════════════════════════════════════════════════
-   FORM INPUT COMPONENT
-   ═══════════════════════════════════════════════════ */
-function FormInput({ label, required, error, type = "text", placeholder, value, onChange, disabled, className = "" }) {
-  return (
-    <div className={className}>
-      <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder || label}
-        disabled={disabled}
-        className={`w-full px-3.5 py-2.5 text-sm rounded-lg border transition-all outline-none ${
-          error
-            ? "border-red-300 bg-red-50 text-red-800 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-        } ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-      />
-      {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   FORM SELECT COMPONENT
-   ═══════════════════════════════════════════════════ */
-function FormSelect({ label, required, options, value, onChange, error, className = "" }) {
-  return (
-    <div className={className}>
-      <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <div className="relative">
-        <select
-          value={value}
-          onChange={onChange}
-          className={`w-full px-3.5 py-2.5 text-sm rounded-lg border appearance-none cursor-pointer transition-all outline-none pr-9 ${
-            error
-              ? "border-red-300 bg-red-50 text-red-800"
-              : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-          }`}
-        >
-          {options.map((opt) => (
-            <option key={typeof opt === "string" ? opt : opt.value} value={typeof opt === "string" ? opt : opt.value}>
-              {typeof opt === "string" ? opt : opt.label}
-            </option>
-          ))}
-        </select>
-        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-      </div>
-      {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   PHONE INPUT WITH CODE SELECTOR
-   ═══════════════════════════════════════════════════ */
-function PhoneInput({ label, required, phoneCode, setPhoneCode, value, onChange, error }) {
-  const dd = useDropdown();
-  const [search, setSearch] = useState("");
-  const filtered = PHONE_CODES.filter((c) =>
-    c.country.toLowerCase().includes(search.toLowerCase()) || c.code.includes(search)
-  );
-
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      <div className="flex gap-1.5">
-        {/* Code Selector */}
-        <div ref={dd.ref} className="relative">
-          <button
-            onClick={() => dd.setOpen(!dd.open)}
-            className="flex items-center gap-1 px-2.5 py-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 hover:bg-white transition-colors min-w-[80px]"
-          >
-            <span className="text-sm">{phoneCode.flag}</span>
-            <span className="text-slate-700 font-medium">{phoneCode.code}</span>
-            <ChevronDown size={10} className="text-slate-400 ml-auto" />
-          </button>
-          {dd.open && (
-            <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-30 overflow-hidden">
-              <div className="p-2 border-b border-slate-100">
-                <div className="relative">
-                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search..."
-                    className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg focus:border-orange-300 outline-none"
-                    autoFocus
-                  />
-                </div>
-              </div>
-              <div className="max-h-52 overflow-y-auto">
-                {filtered.map((c) => (
-                  <button
-                    key={`${c.country}-${c.code}`}
-                    onClick={() => { setPhoneCode(c); dd.setOpen(false); setSearch(""); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-orange-50 transition-colors ${
-                      phoneCode.code === c.code && phoneCode.country === c.country ? "bg-orange-50 text-orange-700" : "text-slate-600"
-                    }`}
-                  >
-                    <span className="text-sm">{c.flag}</span>
-                    <span className="flex-1">{c.country}</span>
-                    <span className="text-slate-400 font-mono">{c.code}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Number Input */}
-        <input
-          type="tel"
-          value={value}
-          onChange={onChange}
-          placeholder="Enter number"
-          className={`flex-1 px-3.5 py-2.5 text-sm rounded-lg border transition-all outline-none ${
-            error
-              ? "border-red-300 bg-red-50"
-              : "border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
-          }`}
-        />
-      </div>
-      {error && <p className="text-[10px] text-red-500 mt-1">{error}</p>}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   LANGUAGE SELECTOR (Multi-select tags)
-   ═══════════════════════════════════════════════════ */
-function LanguageSelector({ selected, setSelected }) {
-  const dd = useDropdown();
-  const [search, setSearch] = useState("");
-  const filtered = LANGUAGES.filter(
-    (l) => l.toLowerCase().includes(search.toLowerCase()) && !selected.includes(l)
-  );
-
-  const remove = (lang) => setSelected(selected.filter((l) => l !== lang));
-  const add = (lang) => { setSelected([...selected, lang]); setSearch(""); };
-
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-        Languages Spoken <span className="text-red-400">*</span>
-      </label>
-      <div ref={dd.ref} className="relative">
-        <div
-          className="min-h-[42px] px-2.5 py-1.5 border border-slate-200 rounded-lg bg-slate-50 focus-within:bg-white focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 transition-all cursor-text flex flex-wrap gap-1.5"
-          onClick={() => dd.setOpen(true)}
-        >
-          {selected.map((lang) => (
-            <span key={lang} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded-md">
-              {lang}
-              <button onClick={(e) => { e.stopPropagation(); remove(lang); }} className="hover:text-sky-900">
-                <X size={10} />
-              </button>
-            </span>
-          ))}
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); dd.setOpen(true); }}
-            placeholder={selected.length === 0 ? "Select languages" : ""}
-            className="flex-1 min-w-[80px] bg-transparent text-sm outline-none py-0.5"
-            onFocus={() => dd.setOpen(true)}
-          />
-        </div>
-        {dd.open && filtered.length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 z-30 max-h-44 overflow-y-auto">
-            {filtered.map((lang) => (
-              <button
-                key={lang}
-                onClick={() => add(lang)}
-                className="w-full text-left px-3.5 py-2 text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-700 transition-colors"
-              >
-                {lang}
-              </button>
-            ))}
-          </div>
-        )}
-        {dd.open && filtered.length === 0 && search && (
-          <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-slate-200 z-30 p-3 text-center">
-            <p className="text-xs text-slate-400">No language found</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   FORM SECTION WRAPPER
-   ═══════════════════════════════════════════════════ */
-function FormSection({ title, icon: Icon, children }) {
-  return (
-    <div className="pt-6 first:pt-0">
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
-        {Icon && <Icon size={16} className="text-orange-500" />}
-        <h2 className="text-sm font-bold text-slate-800">{title}</h2>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   ACCOUNT PROFILE FORM — the main form
-   ═══════════════════════════════════════════════════ */
-function AccountProfileForm({ showErrors }) {
-  const [form, setForm] = useState({
-    username: "jennifer.l2023",
-    password: "••••••••••",
-    firstName: showErrors ? "" : "Jennifer",
-    lastName: showErrors ? "" : "Lawrence",
-    salutation: "Mrs.",
-    companyName: showErrors ? "" : "JL Trading Ltd",
-    regNumber: "12345678",
-    taxId: "GB123456789",
-    roleInCompany: "Director",
-    addressLine1: "14 Commerce Street",
-    addressLine2: "Suite 200",
-    city: "London",
-    postcode: "EC2A 4BX",
-    country: "United Kingdom",
-    telephone: "7911123456",
-    phoneNumber: "2071234567",
-    businessEmail: showErrors ? "" : "jennifer@jltrading.co.uk",
-    personalEmail: "jen.lawrence@gmail.com",
-    skypeId: "jennifer.l.trade",
-    mobile: showErrors ? "" : "7911123456",
-    newsletter: true,
-  });
-
-  const [phoneCode1, setPhoneCode1] = useState(PHONE_CODES[1]);
-  const [phoneCode2, setPhoneCode2] = useState(PHONE_CODES[1]);
-  const [languages, setLanguages] = useState(["English", "French"]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [charCount, setCharCount] = useState(0);
-  const [saved, setSaved] = useState(false);
-
-  const update = (field, value) => setForm((p) => ({ ...p, [field]: value }));
-
-  const errors = showErrors
-    ? [
-        { field: "First Name", message: "First Name is required" },
-        { field: "Last Name", message: "Last Name is required" },
-        { field: "Work Email Address", message: "Work Email Address is required" },
-        { field: "Mobile Number", message: "Mobile is required" },
-        { field: "Company or Trading Name", message: "Company or Trading Name is required" },
-      ]
-    : [];
-
-  const fieldError = (field) => showErrors && !form[field] ? `${field} is required` : "";
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
-
-  return (
-    <div className="space-y-0">
-      {/* Error Banner */}
-      <ValidationErrorBanner errors={errors} onDismiss={() => {}} />
-
-      {/* Page Title */}
-      <div className="mb-5">
-        <h1 className="text-xl font-extrabold text-slate-900">Account Profile</h1>
-        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-          Keep your Wholesale Deals account contact details current to ensure suppliers
-          receive accurate information with your inquiries. Updated details also help us
-          provide you with the best possible support.
-        </p>
-        <p className="text-sm text-slate-500 mt-1">
-          For any questions or assistance, please{" "}
-          <a href="#" className="text-orange-500 hover:text-orange-600 font-semibold">
-            contact our dedicated support team.
-          </a>
-        </p>
-      </div>
-
-      {/* ─── Credentials ─── */}
-      <FormSection title="Login Credentials" icon={Lock}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-              Username <span className="text-red-400">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={form.username}
-                onChange={(e) => update("username", e.target.value)}
-                className="w-full px-3.5 py-2.5 pr-20 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
-              />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-orange-600 hover:bg-orange-50 rounded-md transition-colors">
-                <Pencil size={10} />
-                Change Username
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-              Password <span className="text-red-400">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => update("password", e.target.value)}
-                className="w-full px-3.5 py-2.5 pr-32 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <button onClick={() => setShowPassword(!showPassword)} className="p-1 hover:bg-slate-100 rounded transition-colors">
-                  {showPassword ? <EyeOff size={13} className="text-slate-400" /> : <Eye size={13} className="text-slate-400" />}
-                </button>
-                <button className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold text-orange-600 hover:bg-orange-50 rounded-md transition-colors">
-                  <Pencil size={10} />
-                  Change Password
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </FormSection>
-
-      {/* ─── Personal Details ─── */}
-      <FormSection title="Personal Details" icon={User}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="First Name" required value={form.firstName} onChange={(e) => update("firstName", e.target.value)} error={fieldError("firstName")} />
-          <FormInput label="Last Name" required value={form.lastName} onChange={(e) => update("lastName", e.target.value)} error={fieldError("lastName")} />
-          <FormSelect label="Salutation" required options={["Mr.", "Mrs.", "Ms.", "Dr."]} value={form.salutation} onChange={(e) => update("salutation", e.target.value)} />
-        </div>
-      </FormSection>
-
-      {/* ─── Company Information ─── */}
-      <FormSection title="Company Information" icon={Building2}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="Company or trading name" required value={form.companyName} onChange={(e) => update("companyName", e.target.value)} error={fieldError("companyName")} />
-          <FormInput label="Reg. number" required value={form.regNumber} onChange={(e) => update("regNumber", e.target.value)} />
-          <FormInput label="Tax ID/VAT" required value={form.taxId} onChange={(e) => update("taxId", e.target.value)} />
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-              Role in Company <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={form.roleInCompany}
-              onChange={(e) => { if (e.target.value.length <= 2000) { update("roleInCompany", e.target.value); setCharCount(e.target.value.length); } }}
-              rows={3}
-              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-none"
-            />
-            <p className="text-[10px] text-slate-400 text-right mt-0.5">{charCount}/2000 char.</p>
-          </div>
-        </div>
-      </FormSection>
-
-      {/* ─── Address ─── */}
-      <FormSection title="Address" icon={MapPin}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="Address line 1" required value={form.addressLine1} onChange={(e) => update("addressLine1", e.target.value)} />
-          <FormInput label="Address line 2" value={form.addressLine2} onChange={(e) => update("addressLine2", e.target.value)} />
-          <FormInput label="City" required value={form.city} onChange={(e) => update("city", e.target.value)} />
-          <FormInput label="Postcode/ZIP" required value={form.postcode} onChange={(e) => update("postcode", e.target.value)} />
-          <FormSelect label="Country/State" required options={COUNTRIES} value={form.country} onChange={(e) => update("country", e.target.value)} className="md:col-span-2" />
-        </div>
-      </FormSection>
-
-      {/* ─── Communication ─── */}
-      <FormSection title="Communication" icon={Languages}>
-        <div className="space-y-4">
-          <LanguageSelector selected={languages} setSelected={setLanguages} />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <PhoneInput label="Telephone Number" required phoneCode={phoneCode1} setPhoneCode={setPhoneCode1} value={form.telephone} onChange={(e) => update("telephone", e.target.value)} />
-            <PhoneInput label="Phone Number" required phoneCode={phoneCode2} setPhoneCode={setPhoneCode2} value={form.phoneNumber} onChange={(e) => update("phoneNumber", e.target.value)} />
-            <FormInput label="Business email" required value={form.businessEmail} onChange={(e) => update("businessEmail", e.target.value)} error={fieldError("businessEmail")} />
-            <FormInput label="Personal email" required value={form.personalEmail} onChange={(e) => update("personalEmail", e.target.value)} />
-            <FormInput label="Skype ID" required value={form.skypeId} onChange={(e) => update("skypeId", e.target.value)} />
-          </div>
-
-          {/* Newsletter Toggle */}
-          <label className="flex items-center gap-3 cursor-pointer pt-2">
-            <div
-              className={`relative w-10 h-5.5 rounded-full transition-colors cursor-pointer ${form.newsletter ? "bg-orange-500" : "bg-slate-200"}`}
-              onClick={() => update("newsletter", !form.newsletter)}
-              style={{ height: "22px" }}
-            >
-              <div className={`absolute top-0.5 w-4.5 h-4.5 bg-white rounded-full shadow-sm transition-transform ${form.newsletter ? "translate-x-5" : "translate-x-0.5"}`} style={{ width: "18px", height: "18px" }} />
-            </div>
-            <span className="text-sm text-slate-600">Subscribe to Newsletter</span>
-          </label>
-        </div>
-      </FormSection>
-
-      {/* Submit Button */}
-      <div className="pt-6 pb-2 flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl transition-colors shadow-sm flex items-center gap-2"
-        >
-          {saved ? <Check size={16} /> : <Shield size={16} />}
-          {saved ? "Saved!" : "Update Contact Details"}
-        </button>
-        {saved && (
-          <span className="text-xs text-emerald-600 font-semibold animate-in fade-in duration-300">
-            Profile updated successfully
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   MAIN DEMO — Phase 5 Full Layout
+   PHASE 5 ACCOUNT DASHBOARD — Main dashboard page
    ═══════════════════════════════════════════════════ */
 export default function Phase5AccountDashboard() {
-  const [currentUser, setCurrentUser] = useState("female");
-  const [showErrors, setShowErrors] = useState(false);
-  const [activePage, setActivePage] = useState("account-profile");
-
-  const user = USERS[currentUser];
+  const user = usePageUser();
+  const [sidebarCollapsed, toggleSidebar] = usePanelCollapse("wup-account-collapsed");
 
   return (
-    <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'DM Sans', 'Outfit', sans-serif" }}>
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
-              <Tag size={14} className="text-white" />
-            </div>
-            <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-orange-500">Up</span>
-            </span>
-          </div>
-          <span className="text-xs text-slate-400">Phase 5 — Account Dashboard</span>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <Breadcrumb items={[
+          { label: "WholesaleUp", href: "/" },
+          { label: "Dashboard" },
+        ]} />
+        <MobileDashboardNav activePage="dashboard" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Controls */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
-          <h2 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <LayoutDashboard size={16} className="text-orange-500" />
-            Interactive Controls
-          </h2>
-          <div className="flex flex-wrap gap-3 mb-3">
-            <button
-              onClick={() => setCurrentUser(currentUser === "female" ? "male" : "female")}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                currentUser === "female" ? "bg-pink-100 text-pink-700" : "bg-indigo-100 text-indigo-700"
-              }`}
-            >
-              <User size={12} />
-              {user.firstName} {user.lastName} ({user.tier})
-            </button>
-            <button
-              onClick={() => setShowErrors(!showErrors)}
-              className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                showErrors ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              <AlertTriangle size={12} />
-              {showErrors ? "Showing Errors" : "Show Validation Errors"}
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              "Account sidebar",
-              "Upgrade banner",
-              "Validation errors",
-              "Credentials section",
-              "Personal details",
-              "Company info",
-              "Address form",
-              "Communication",
-              "Language selector",
-              "Phone code picker",
-              "Newsletter toggle",
-              "Male/Female variants",
-            ].map((f) => (
-              <div key={f} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                {f}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Dashboard Layout */}
         <div className="flex gap-6 items-start">
-          {/* Sidebar */}
-          <AccountSidebar user={user} activePage={activePage} />
+          <AccountSidebar user={user} activePage="dashboard" collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
-          {/* Main Content */}
           <div className="flex-1 min-w-0">
-            {/* Upgrade Banner */}
             <UpgradeBanner user={user} />
 
-            {/* Form Card */}
+            {/* Dashboard Summary — placeholder */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 lg:p-8">
-              <AccountProfileForm showErrors={showErrors} />
+              <h1 className="text-xl font-extrabold text-slate-900">Dashboard</h1>
+              <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                Welcome back, {user.firstName}. Your account summary will appear here.
+              </p>
+
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { label: "Account Tier", value: user.tier, icon: Shield, color: "orange" },
+                  { label: "Member Since", value: "Jan 2024", icon: Calendar, color: "blue" },
+                  { label: "Saved Deals", value: "12", icon: Heart, color: "pink" },
+                ].map((card) => (
+                  <div key={card.label} className="flex items-center gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      card.color === "orange" ? "bg-orange-100 text-orange-600" :
+                      card.color === "blue" ? "bg-blue-100 text-blue-600" :
+                      "bg-pink-100 text-pink-600"
+                    }`}>
+                      <card.icon size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{card.label}</p>
+                      <p className="text-sm font-bold text-slate-800">{card.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 rounded-xl border border-dashed border-slate-300 bg-slate-50/50">
+                <p className="text-xs text-slate-400 text-center">Full dashboard summary — orders, messages, recent activity — coming soon</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-      `}</style>
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════════════
+   RE-EXPORTS FOR BACKWARD COMPATIBILITY
+   Other pages import these from dashboard.jsx
+   ═══════════════════════════════════════════════════ */
+export {
+  FlagImg,
+  useDropdown,
+  FloatingField,
+  FloatingSelect,
+  FloatingTextarea,
+  CountrySelect,
+  FormSection,
+  TabStatus,
+  ProfileTabBar,
+  ErrorSummaryPanel,
+  useFocusTrap,
+  COUNTRIES,
+  CURRENCIES,
+  PHONE_CODES,
+  LANGUAGES,
+  HelpTooltip,
+  PhoneInput,
+  LanguageSelector,
+  MultiSelect,
+  TabProgressBadge,
+  PHONE_RULES,
+  PHONE_PLACEHOLDERS,
+  /* Shared form components (used by buyer-profile + supplier-profile) */
+  CURRENCY_SYMBOLS,
+  useHeaderCurrency,
+  CurrencyAmountInput,
+  PRODUCT_CATEGORY_TREE,
+  CategorySelector,
+  BrandPillInput,
+  ImageUploadPlaceholder,
+  BusinessHoursGrid,
+  DEFAULT_BUSINESS_HOURS,
+  TAX_CLASS_OPTIONS,
+  INVOICE_TYPE_OPTIONS,
+  SANITIZED_INVOICE_OPTIONS,
+  INCOTERMS_OPTIONS,
+  FloatingDatePicker,
+} from "@/components/shared/form-fields";
+
+export { AccountProfilePage } from "./account-profile";

@@ -1,8 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { useSession, signOut } from "next-auth/react";
+import AuthModal from "@/components/shared/auth-modal";
+import Footer from "@/components/shared/footer";
+import DotWorldMap from "@/components/shared/dot-world-map";
+import { RotatingStatsTicker } from "@/components/shared/rotating-stats-ticker";
+import { WholesaleUpIcon, WholesaleUpLogo } from "@/components/shared/logo";
+import { useVisibilityInterval } from "@/components/shared/use-visibility-interval";
+import { LastLoginToast } from "@/components/shared/auth-ui";
+import { usePathname, useRouter } from "next/navigation";
+import { useDemoAuth } from "@/components/shared/demo-auth-context";
+import { usePanelCollapse } from "@/components/shared/use-panel-collapse";
+import CookieConsent from "@/components/shared/cookie-consent";
 import {
   Search,
   ChevronDown,
@@ -33,42 +45,96 @@ import {
   SlidersHorizontal,
   Building2,
   CreditCard,
-  ShoppingCart,
-  Baby,
   Shirt,
-  Monitor,
-  Smartphone,
   Sparkles,
   Flower2,
   Watch,
   Gamepad2,
-  Briefcase,
-  Gavel,
   Dumbbell,
   Boxes,
   Tv,
-  BadgeCheck,
+  Baby,
   ThumbsUp,
   TrendingUp,
   PanelLeftClose,
   PanelLeftOpen,
-  Users,
-  Percent,
   ClipboardList,
   Link2,
   Archive,
+  CheckCircle2,
+  AlertCircle,
+  ImageOff,
+  LogIn,
+  Zap,
+  ArrowRight,
+  Star,
+  Gift,
+  UserPlus,
+  KeyRound,
+  Newspaper,
+  Car,
+  UtensilsCrossed,
+  PawPrint,
+  Gavel,
 } from "lucide-react";
+import { CATEGORY_TREE, CATEGORY_NAMES } from "@/lib/categories";
+import { DASHBOARD_NAV_LINKS } from "@/lib/dashboard-nav";
 // DotLottieReact removed — using text logo instead
 
-/* ─────────────── Auth Context (simulated) ─────────────── */
-const MOCK_USER = {
-  firstName: "Jennifer",
-  lastName: "Lawrence",
-  initials: "JL",
-  tier: "STANDARD",
-  expiresOn: "9 Jan 2025",
-  pin: "2017",
+/* ─────────────── Auth Context (H9: real session) ──────────
+   User data sourced from NextAuth session via useSession().
+   M10: Subscription dates from user.tierExpiresAt in the JWT.
+   ────────────────────────────────────────────────────────── */
+
+/* Active offer discount — single source of truth for footer badge + exit-intent popup.
+   Will be replaced by a backend/admin-settings fetch in production. */
+const ACTIVE_OFFER_DISCOUNT = 25;
+
+/* Demo users — mirrors dashboard.jsx USERS for sidebar display when a demo role is active */
+const DEMO_USERS = {
+  "free":             { firstName: "Sarah",    lastName: "Mitchell",   initials: "SM", tier: "FREE" },
+  "standard":         { firstName: "Jennifer", lastName: "Lawrence",   initials: "JL", tier: "STANDARD" },
+  "premium":          { firstName: "Anand",    lastName: "Kumar",      initials: "AK", tier: "PREMIUM" },
+  "premium-plus":     { firstName: "Michael",  lastName: "Chen",       initials: "MC", tier: "PREMIUM+" },
+  "supplier-free":    { firstName: "Lisa",     lastName: "Thompson",   initials: "LT", tier: "SUPPLIER" },
+  "supplier-premium": { firstName: "David",    lastName: "Richardson", initials: "DR", tier: "SUPPLIER PRO" },
 };
+
+const FALLBACK_USER = {
+  firstName: "Guest",
+  lastName: "",
+  initials: "G",
+  tier: "FREE",
+  expiresOn: null,
+  email: "",
+};
+
+function useLayoutUser() {
+  const { data: session, status } = useSession();
+
+  return useMemo(() => {
+    if (status === "loading" || !session?.user) return { user: FALLBACK_USER, status };
+    const { user } = session;
+    const firstName = user.name?.split(" ")[0] || "";
+    const lastName = user.name?.split(" ").slice(1).join(" ") || "";
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "U";
+    return {
+      user: {
+        firstName,
+        lastName,
+        initials,
+        tier: (user.tier || "free").toUpperCase(),
+        expiresOn: user.tierExpiresAt
+          ? new Date(user.tierExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+          : null,
+        email: user.email || "",
+        image: user.image || null,
+        username: user.username || "",
+      },
+      status,
+    };
+  }, [session, status]);
+}
 
 /* ─────────────── Currency Options ─────────────── */
 const CURRENCIES = [
@@ -83,50 +149,67 @@ const CURRENCIES = [
 const SIDEBAR_LINKS = [
   { label: "Home", href: "/homepage", icon: Home },
   { label: "Deals", href: "/deals", icon: Package },
-  { label: "Single Deal", href: "/single-deal", icon: Package },
+  { label: "Single Deal", href: "/deal", icon: Package },
   { label: "Suppliers", href: "/suppliers", icon: Building2 },
-  { label: "Supplier Profile", href: "/supplier-profile", icon: Store },
-  { label: "Liquidators", href: "/suppliers?type=liquidators", icon: Gavel },
-  { label: "Dropshippers", href: "/suppliers?type=dropshippers", icon: Boxes },
-  { label: "Filters", href: "/filters", icon: SlidersHorizontal },
+  { label: "Supplier Profile", href: "/supplier", icon: Store },
+  { label: "Liquidators", href: "/suppliers/liquidators", icon: Gavel },
+  { label: "Dropshippers", href: "/suppliers/dropshippers", icon: Boxes },
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Pricing", href: "/pricing", icon: CreditCard },
   { label: "Gating", href: "/gating", icon: Shield },
 ];
 
-/* ─────────────── Categories Data with Subcategories ─────────────── */
-const CATEGORY_LIST = [
-  { name: "Baby Products", icon: Baby, href: "/categories/baby-products", subs: ["Clothing & Shoes (12)", "Feeding & Nursing (8)", "Toys & Activity (15)", "Pushchairs & Prams (3)", "Safety & Health (6)"] },
-  { name: "Clothing", icon: Shirt, href: "/categories/clothing", subs: ["Men's Clothing (45)", "Women's Clothing (62)", "Children's Clothing (28)", "Sportswear (19)", "Accessories (34)"] },
-  { name: "Computing", icon: Monitor, href: "/categories/computing", subs: ["Laptops & Notebooks (18)", "Desktop PCs (7)", "Tablets (12)", "Components (24)", "Peripherals (31)"] },
-  { name: "Consumer Electronic", icon: Tv, href: "/categories/consumer-electronic", subs: ["TV & Home Cinema (14)", "Audio & HiFi (9)", "Cameras & Camcorders (6)", "Smart Home (11)", "Wearable Tech (8)"] },
-  { name: "Health & Beauty", icon: Sparkles, href: "/categories/health-beauty", subs: ["Diet, Supplements, & Vitamins (0)", "Hair & Skin Care (8)", "Makeup & Cosmetics (9)", "Manicure & Pedicure (10)", "Natural & Alternative Therapy (9)", "Perfumes & Fragrances (90)", "Personal Care (90)"] },
-  { name: "Home & Garden", icon: Flower2, href: "/categories/home-garden", subs: ["Furniture (22)", "Kitchen & Dining (18)", "Bedding & Linen (14)", "Garden Tools (9)", "Home Decor (27)"] },
-  { name: "Jewellery & Watches", icon: Watch, href: "/categories/jewellery-watches", subs: ["Rings (15)", "Necklaces (12)", "Watches (20)", "Earrings (8)", "Bracelets (11)"] },
-  { name: "Leisure & Entertainment", icon: Gamepad2, href: "/categories/leisure-entertainment", subs: ["Books & Magazines (7)", "DVDs & Blu-ray (4)", "Musical Instruments (6)", "Board Games (9)", "Arts & Crafts (13)"] },
-  { name: "Mobile & Home Phones", icon: Smartphone, href: "/categories/mobile-phones", subs: ["Smartphones (32)", "Phone Cases (45)", "Chargers & Cables (28)", "Screen Protectors (15)", "Headphones (19)"] },
-  { name: "Office & Business", icon: Briefcase, href: "/categories/office-business", subs: ["Office Supplies (18)", "Printers & Ink (7)", "Office Furniture (5)", "Filing & Storage (12)", "Presentation (3)"] },
-  { name: "Police Auctions & Auction Houses", icon: Gavel, href: "/categories/police-auctions", subs: ["Lost Property (4)", "Seized Goods (6)", "Unclaimed Parcels (3)", "Government Surplus (2)"] },
-  { name: "Sports & Fitness", icon: Dumbbell, href: "/categories/sports-fitness", subs: ["Gym Equipment (11)", "Outdoor Sports (14)", "Team Sports (8)", "Cycling (6)", "Swimming (5)"] },
-  { name: "Surplus & Stocklots", icon: Boxes, href: "/categories/surplus-stocklots", subs: ["Mixed Pallets (7)", "Customer Returns (12)", "End of Line (9)", "Overstock (15)", "Clearance (20)"] },
-  { name: "Toys & Games", icon: Gamepad2, href: "/categories/toys-games", subs: ["Action Figures (8)", "Building Toys (12)", "Dolls (6)", "Educational Toys (15)", "Outdoor Toys (9)"] },
-];
+/* ─────────────── Category SVG Illustrations (tight viewBox) ─────────────── */
+const CATEGORY_ILLUSTRATIONS = {
+  "Clothing & Fashion": (<svg viewBox="25 17 50 61" fill="none" className="w-full h-full"><path d="M35 25L42 20H58L65 25L72 35L65 38L60 30V75H40V30L35 38L28 35L35 25Z" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><path d="M42 20C42 20 45 28 50 28C55 28 58 20 58 20" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/><line x1="40" y1="45" x2="60" y2="45" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="50" cy="55" r="2" fill="currentColor"/><circle cx="50" cy="63" r="2" fill="currentColor"/></svg>),
+  "Health & Beauty": (<svg viewBox="18 16 64 68" fill="none" className="w-full h-full"><path d="M50 48C44 44 36 32 46 22C54 26 54 42 50 48Z" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M50 48C44 44 36 32 46 22C54 26 54 42 50 48Z" stroke="currentColor" strokeWidth="2" fill="none" transform="rotate(72 50 48)" /><path d="M50 48C44 44 36 32 46 22C54 26 54 42 50 48Z" stroke="currentColor" strokeWidth="2" fill="none" transform="rotate(144 50 48)" /><path d="M50 48C44 44 36 32 46 22C54 26 54 42 50 48Z" stroke="currentColor" strokeWidth="2" fill="none" transform="rotate(216 50 48)" /><path d="M50 48C44 44 36 32 46 22C54 26 54 42 50 48Z" stroke="currentColor" strokeWidth="2" fill="none" transform="rotate(288 50 48)" /><circle cx="50" cy="48" r="5" fill="currentColor" /></svg>),
+  "Home & Garden": (<svg viewBox="14 24 78 58" fill="none" className="w-full h-full"><path d="M18 50L45 27L72 50" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><rect x="26" y="50" width="38" height="28" rx="1" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="39" y="60" width="12" height="18" rx="1" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="30" y="55" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2" fill="none"/><path d="M43 78V68" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="76" cy="54" r="7" stroke="currentColor" strokeWidth="2" fill="none"/><circle cx="84" cy="54" r="7" stroke="currentColor" strokeWidth="2" fill="none"/><circle cx="80" cy="47" r="7" stroke="currentColor" strokeWidth="2" fill="none"/><path d="M80 61V78" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>),
+  "Electronics & Technology": (<svg viewBox="19 25 62 46" fill="none" className="w-full h-full"><rect x="22" y="28" width="56" height="36" rx="3" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="26" y="32" width="48" height="26" rx="1" stroke="currentColor" strokeWidth="2" fill="none"/><path d="M38 68H62" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><path d="M44 64V68" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><path d="M56 64V68" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><path d="M35 42L42 48L55 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>),
+  "Toys & Games": (<svg viewBox="20 14 56 70" fill="none" className="w-full h-full"><path d="M50 18L76 33L50 48L24 33Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" fill="none"/><path d="M24 33L50 48L50 80L24 65Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" fill="none"/><path d="M50 48L76 33L76 65L50 80Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" fill="none"/><circle cx="50" cy="33" r="2.5" fill="currentColor"/><circle cx="40" cy="47" r="2.5" fill="currentColor"/><circle cx="34" cy="63" r="2.5" fill="currentColor"/><circle cx="66" cy="44" r="2.5" fill="currentColor"/><circle cx="63" cy="54" r="2.5" fill="currentColor"/><circle cx="60" cy="64" r="2.5" fill="currentColor"/></svg>),
+  "Gifts & Seasonal": (<svg viewBox="22 18 56 64" fill="none" className="w-full h-full"><rect x="28" y="38" width="44" height="38" rx="3" stroke="currentColor" strokeWidth="2.5" fill="none"/><path d="M50 38V76" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M28 52H72" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M50 38C50 38 40 38 36 32C32 26 38 20 44 24C48 27 50 38 50 38Z" stroke="currentColor" strokeWidth="2.5" fill="none"/><path d="M50 38C50 38 60 38 64 32C68 26 62 20 56 24C52 27 50 38 50 38Z" stroke="currentColor" strokeWidth="2.5" fill="none"/></svg>),
+  "Sports & Outdoors": (<svg viewBox="17 35 66 30" fill="none" className="w-full h-full"><path d="M22 50H78" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round"/><rect x="28" y="38" width="8" height="24" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="64" y="38" width="8" height="24" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="20" y="42" width="6" height="16" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="74" y="42" width="6" height="16" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/></svg>),
+  "Jewellery & Watches": (<svg viewBox="26 23 48 54" fill="none" className="w-full h-full"><circle cx="50" cy="50" r="20" stroke="currentColor" strokeWidth="2.5" fill="none"/><circle cx="50" cy="50" r="16" stroke="currentColor" strokeWidth="2" fill="none"/><path d="M50 38V50L58 56" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="44" y="26" width="12" height="6" rx="2" stroke="currentColor" strokeWidth="2" fill="none"/><rect x="44" y="68" width="12" height="6" rx="2" stroke="currentColor" strokeWidth="2" fill="none"/><circle cx="50" cy="50" r="2" fill="currentColor"/></svg>),
+  "Food & Beverages": (<svg viewBox="22 18 56 64" fill="none" className="w-full h-full"><path d="M36 22V42" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><path d="M36 42C36 42 28 44 28 52C28 60 36 62 36 62V78" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/><path d="M56 22V26C56 30 60 32 60 38C60 44 56 46 56 46V78" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/><path d="M64 22V26C64 30 60 32 60 38" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/><path d="M72 22V26C72 30 66 34 64 38" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/></svg>),
+  "Pet Supplies": (<svg viewBox="20 20 60 60" fill="none" className="w-full h-full"><circle cx="40" cy="40" r="6" stroke="currentColor" strokeWidth="2.5" fill="none"/><circle cx="60" cy="40" r="6" stroke="currentColor" strokeWidth="2.5" fill="none"/><circle cx="34" cy="56" r="5" stroke="currentColor" strokeWidth="2.5" fill="none"/><circle cx="66" cy="56" r="5" stroke="currentColor" strokeWidth="2.5" fill="none"/><ellipse cx="50" cy="62" rx="12" ry="10" stroke="currentColor" strokeWidth="2.5" fill="none"/></svg>),
+  "Baby & Kids": (<svg viewBox="34 12 32 66" fill="none" className="w-full h-full"><path d="M44 25C44 18 47 14 50 14C53 14 56 18 56 25" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/><rect x="40" y="25" width="20" height="6" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="36" y="31" width="28" height="44" rx="4" stroke="currentColor" strokeWidth="2.5" fill="none"/><path d="M40 45H48" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M40 55H46" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M40 65H48" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>),
+  "Surplus & Clearance": (<svg viewBox="19 22 62 54" fill="none" className="w-full h-full"><rect x="22" y="45" width="26" height="22" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="52" y="45" width="26" height="22" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="37" y="25" width="26" height="22" rx="2" stroke="currentColor" strokeWidth="2.5" fill="none"/><path d="M35 56H48" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M65 56H78" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M50 36H63" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M22 72H78" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 3"/></svg>),
+  "Automotive & Parts": (<svg viewBox="14 30 72 40" fill="none" className="w-full h-full"><path d="M28 55L32 42C34 38 38 36 42 36H58C62 36 66 38 68 42L72 55" stroke="currentColor" strokeWidth="2.5" fill="none"/><rect x="22" y="55" width="56" height="16" rx="4" stroke="currentColor" strokeWidth="2.5" fill="none"/><circle cx="34" cy="71" r="6" stroke="currentColor" strokeWidth="2.5" fill="none"/><circle cx="66" cy="71" r="6" stroke="currentColor" strokeWidth="2.5" fill="none"/><path d="M40 47H60" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><circle cx="28" cy="59" r="2" fill="currentColor"/><circle cx="72" cy="59" r="2" fill="currentColor"/></svg>),
+};
+
+/* ─────────────── Category icon mapping (Lucide icons for mobile/compact views) ─────────────── */
+const CATEGORY_ICONS = {
+  "Clothing & Fashion": Shirt,
+  "Health & Beauty": Sparkles,
+  "Home & Garden": Flower2,
+  "Electronics & Technology": Tv,
+  "Toys & Games": Gamepad2,
+  "Gifts & Seasonal": Gift,
+  "Sports & Outdoors": Dumbbell,
+  "Jewellery & Watches": Watch,
+  "Food & Beverages": UtensilsCrossed,
+  "Pet Supplies": PawPrint,
+  "Baby & Kids": Baby,
+  "Surplus & Clearance": Boxes,
+  "Automotive & Parts": Car,
+};
+
+/* ─────────────── Categories Data — derived from canonical CATEGORY_TREE ─────────────── */
+const CATEGORY_LIST = CATEGORY_TREE.map((cat) => ({
+  name: cat.name,
+  icon: CATEGORY_ICONS[cat.name] || Package,
+  href: cat.href,
+  subs: cat.subs.map((s) => ({ label: s.label, href: `/deals/${cat.id}/${s.id}` })),
+}));
 
 /* ─────────────── Section Nav Links ─────────────── */
 const SECTION_NAV_LINKS = [
   { label: "Deals", href: "/deals" },
-  { label: "Wholesale Suppliers", href: "/suppliers?type=wholesale" },
-  { label: "Liquidators", href: "/suppliers?type=liquidators" },
-  { label: "Drop Shippers", href: "/suppliers?type=dropshippers" },
+  { label: "Suppliers", href: "/suppliers" },
+  { label: "Liquidators", href: "/suppliers/liquidators" },
+  { label: "Dropshippers", href: "/suppliers/dropshippers" },
 ];
 
-/* ─────────────── Rotating Stats Data ─────────────── */
-const ROTATING_STATS = [
-  { icon: BadgeCheck, text: "Over 42,900+ verified suppliers" },
-  { icon: Users, text: "Trusted by 901,900+ resellers" },
-  { icon: ShoppingCart, text: "Buy direct without commissions" },
-  { icon: Percent, text: "High margins, up to 95% below retail" },
-];
+/* DASHBOARD_NAV_LINKS — imported from @/lib/dashboard-nav */
 
 /* ─────────────── Dropdown Hook ─────────────── */
 function useDropdown() {
@@ -145,174 +228,203 @@ function useDropdown() {
 }
 
 /* ═══════════════════════════════════════════════════
-   ROTATING STATS TICKER — Scrolls upward in sidebar header
+   SIDEBAR — Collapsible left navigation (sitewide)
    ═══════════════════════════════════════════════════ */
-function RotatingStatsTicker() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % ROTATING_STATS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const stat = ROTATING_STATS[currentIndex];
-
+function SidebarTooltip({ children, label, collapsed, isActive, icon: Icon, href, onClick, variant }) {
+  const [show, setShow] = useState(false);
+  if (!collapsed) return children;
+  const isCta = variant === "cta";
+  const expandedClasses = `absolute left-0 top-0 bottom-0 flex items-center gap-3 px-3 rounded-lg whitespace-nowrap z-[60] text-sm font-semibold shadow-lg transition-colors cursor-pointer ${
+    isCta
+      ? "bg-orange-500 text-white hover:bg-orange-600"
+      : isActive
+        ? "bg-slate-800 text-orange-400 border border-orange-500/30"
+        : "bg-slate-800 text-white hover:bg-slate-700"
+  }`;
+  const iconClasses = isCta ? "shrink-0 text-white" : `shrink-0 ${isActive ? "text-orange-400" : "text-slate-400"}`;
   return (
-    <div className="h-6 w-full overflow-hidden relative">
-      <div
-        key={currentIndex}
-        className="flex items-center justify-center gap-1.5 h-6 text-white text-[10px] font-medium animate-slideUp"
-      >
-        <stat.icon size={12} className="text-orange-400 shrink-0" />
-        <span className="truncate">{stat.text}</span>
-      </div>
+    <div
+      className="relative"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      {/* The original icon-only child (always rendered, invisible when hovered) */}
+      <div className={show ? "invisible" : ""}>{children}</div>
+      {/* Expanded row overlay — icon + label slide out as one unified row */}
+      {show && (
+        href ? (
+          <Link href={href} scroll={true} onClick={() => window.scrollTo({ top: 0 })} className={expandedClasses}>
+            {Icon && <Icon size={18} className={iconClasses} />}
+            {label}
+          </Link>
+        ) : (
+          <button type="button" onClick={onClick} className={expandedClasses}>
+            {Icon && <Icon size={18} className={iconClasses} />}
+            {label}
+          </button>
+        )
+      )}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   LOGO — White text on dark background
-   ═══════════════════════════════════════════════════ */
-function WholesaleUpIcon({ className = "", dark = false }) {
-  const strokeColor = dark ? "#0f172a" : "#ffffff";
-  const gradId = dark ? "arrowGradDark" : "arrowGrad";
-  return (
-    <svg viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <defs>
-        <linearGradient id={gradId} x1="0.5" y1="1" x2="0.5" y2="0">
-          <stop offset="0%" stopColor={strokeColor} />
-          <stop offset="40%" stopColor="#f97316" />
-          <stop offset="100%" stopColor="#f97316" />
-        </linearGradient>
-      </defs>
-      {/* Left downstroke of W */}
-      <path d="M8 12 L22 62" stroke={strokeColor} strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      {/* Middle V of W */}
-      <path d="M22 62 L40 28 L56 62" stroke={strokeColor} strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      {/* Right upstroke becoming arrow shaft (to orange gradient) */}
-      <path d="M56 62 L72 18" stroke={`url(#${gradId})`} strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      {/* Orange arrowhead */}
-      <polygon points="72,4 60,22 84,22" fill="#f97316"/>
-    </svg>
-  );
-}
-
-function WholesaleUpLogo({ size = "default", dark = false }) {
-  const iconClass = size === "small" ? "w-6 h-6" : "w-8 h-8";
-  const textClass = size === "small"
-    ? "text-base font-extrabold tracking-tight"
-    : "text-lg font-extrabold tracking-tight";
-  const wordColor = dark ? "text-slate-900" : "text-white";
-
-  return (
-    <Link href="/" className="flex items-center gap-1.5">
-      <WholesaleUpIcon className={iconClass} dark={dark} />
-      <span className={textClass}>
-        <span className={wordColor}>Wholesale</span>
-        <span className="text-orange-500">Up</span>
-      </span>
-    </Link>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   SIDEBAR — Collapsible left navigation (sitewide)
-   ═══════════════════════════════════════════════════ */
-function Sidebar({ isAuthenticated, user, onLogin, collapsed, onToggle }) {
+function Sidebar({ isAuthenticated, user, onLogin, onLogout, collapsed, onToggle }) {
   const pathname = usePathname();
-
   return (
     <aside
-      className={`hidden lg:flex flex-col bg-slate-900 shrink-0 sticky top-0 h-screen z-30 transition-all duration-300 ease-in-out ${
-        collapsed ? "w-0 overflow-hidden" : "w-64"
+      data-panel="nav"
+      className={`hidden xl:flex flex-col bg-slate-900 shrink-0 sticky top-0 h-screen z-30 transition-all duration-300 ease-in-out overflow-visible ${
+        collapsed ? "w-16" : "w-64"
       }`}
     >
-      <div className="flex flex-col h-full w-64">
+      <div className={`flex flex-col h-full ${collapsed ? "w-16" : "w-64"} transition-all duration-300 ${collapsed ? "overflow-visible" : "overflow-hidden"}`}>
         {/* Sidebar Header: Rotating stats + Logo */}
-        <div className="border-b border-slate-800">
-          {/* Rotating stats ticker */}
-          <div className="bg-slate-800 px-3 h-8 flex items-center justify-center">
-            <RotatingStatsTicker />
+        <div>
+          {/* Rotating stats ticker — text hidden when collapsed, bar kept for alignment */}
+          <div data-sidebar-ticker className="bg-slate-900 px-3 h-9 flex items-center justify-center">
+            {!collapsed && <RotatingStatsTicker />}
           </div>
-          {/* Logo — matches header Row 2 height (h-14) */}
-          <div className="px-4 h-14 flex items-center">
-            <WholesaleUpLogo />
+          {/* Logo — matches header Row 2 height (h-14)
+               BOTH variants always rendered so the CSS flash-prevention overrides
+               can show/hide the correct one before React hydration. */}
+          <div data-sidebar-logo-area className={`h-14 flex items-center justify-center ${collapsed ? "px-2" : "px-6"}`}>
+            <span data-sidebar-logo-full className={collapsed ? "hidden" : ""}><WholesaleUpLogo /></span>
+            <span data-sidebar-logo-collapsed className={collapsed ? "" : "hidden"}>
+              <Link href="/" className="flex items-center justify-center">
+                <WholesaleUpIcon className="w-8 h-8" />
+              </Link>
+            </span>
           </div>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          <p className="px-3 pt-2 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-            Navigation
-          </p>
+        <nav className={`flex-1 ${collapsed ? "overflow-visible" : "overflow-y-auto thin-scrollbar"} py-4 ${collapsed ? "px-2" : "px-3"} space-y-1`}>
           {SIDEBAR_LINKS.map((link) => {
-            const isActive = pathname === link.href;
+            /* Sub-routes that are their own sidebar items — must NOT highlight the parent "Suppliers" link */
+            const SUPPLIERS_OWN_ROUTES = ["/suppliers/liquidators", "/suppliers/dropshippers"];
+            const isActive = link.href === "/deals"
+              ? pathname === link.href || pathname.startsWith(link.href + "/")
+              : link.href === "/suppliers"
+                ? (pathname === link.href || pathname.startsWith(link.href + "/")) && !SUPPLIERS_OWN_ROUTES.some((r) => pathname.startsWith(r))
+                : pathname === link.href;
+            /* Contextual hrefs: if on /deals/clothing-fashion?keywords=X, the Suppliers link → /suppliers/clothing-fashion?keywords=X and vice versa.
+               Skip contextual rewriting when on an own-route (liquidators/dropshippers) — those aren't categories. */
+            let contextualHref = link.href;
+            if (link.href === "/deals" || link.href === "/suppliers") {
+              const onOwnRoute = SUPPLIERS_OWN_ROUTES.some((r) => pathname.startsWith(r));
+              const dealsMatch = pathname.match(/^\/deals(\/[^?]+)?/);
+              const suppliersMatch = !onOwnRoute ? pathname.match(/^\/suppliers(\/[^?]+)?/) : null;
+              const categorySuffix = dealsMatch?.[1] || suppliersMatch?.[1] || "";
+              if (categorySuffix) contextualHref = link.href + categorySuffix;
+              const qs = typeof window !== "undefined" ? window.location.search : "";
+              if (qs) contextualHref += qs;
+            }
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
-                }`}
-              >
-                <link.icon size={18} className={isActive ? "text-orange-400" : "text-slate-500"} />
-                {link.label}
-              </Link>
+              <SidebarTooltip key={link.href} label={link.label} collapsed={collapsed} isActive={isActive} icon={link.icon} href={contextualHref}>
+                <Link
+                  href={contextualHref}
+                  scroll={true}
+                  onClick={() => window.scrollTo({ top: 0 })}
+                  className={`flex items-center ${collapsed ? "justify-center w-full px-0 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? collapsed
+                        ? "bg-slate-800 text-orange-400 border border-orange-500/30"
+                        : "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  <link.icon size={18} className={`shrink-0 ${isActive ? "text-orange-400" : "text-slate-500"}`} />
+                  {!collapsed && <span>{link.label}</span>}
+                </Link>
+              </SidebarTooltip>
             );
           })}
 
-          {isAuthenticated && (
+          {/* MY ACCOUNT section — visible when authenticated, hidden on /dashboard pages */}
+          {isAuthenticated && !pathname.startsWith("/dashboard") && (
             <>
-              <div className="h-px bg-slate-800 my-3 mx-3" />
-              <p className="px-3 pt-2 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Account
-              </p>
+              <div className={`h-px bg-slate-800 my-3 ${collapsed ? "mx-1" : "mx-3"}`} />
+              {!collapsed && (
+                <p className="px-3 pt-2 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  My Account
+                </p>
+              )}
               {[
+                { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+                { label: "Account Profile", href: "/dashboard/account-profile", icon: User },
+                { label: "Orders", href: "/dashboard", icon: ShoppingBag },
                 { label: "My Favourites", href: "/favourites", icon: Heart },
                 { label: "Messages", href: "/messages", icon: MessageSquare, badge: 3 },
-                { label: "Settings", href: "/settings", icon: Settings },
-              ].map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                >
-                  <link.icon size={18} className="text-slate-500" />
-                  <span className="flex-1">{link.label}</span>
-                  {link.badge && (
-                    <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">
-                      {link.badge}
-                    </span>
-                  )}
-                </Link>
-              ))}
+                { label: "Billing", href: "/dashboard", icon: Settings },
+              ].map((link) => {
+                const isLinkActive = pathname === link.href;
+                return (
+                  <SidebarTooltip key={link.label} label={link.label} collapsed={collapsed} icon={link.icon} href={link.href}>
+                    <Link
+                      href={link.href}
+                      scroll={true}
+                      onClick={() => window.scrollTo({ top: 0 })}
+                      className={`flex items-center ${collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5"} rounded-lg text-sm font-medium transition-colors ${
+                        isLinkActive
+                          ? collapsed
+                            ? "bg-slate-800 text-orange-400 border border-orange-500/30"
+                            : "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800"
+                      }`}
+                    >
+                      <link.icon size={18} className={`shrink-0 ${isLinkActive ? "text-orange-400" : "text-slate-500"}`} />
+                      {!collapsed && <span className="flex-1">{link.label}</span>}
+                      {!collapsed && link.badge && (
+                        <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">
+                          {link.badge}
+                        </span>
+                      )}
+                    </Link>
+                  </SidebarTooltip>
+                );
+              })}
             </>
           )}
         </nav>
 
         {/* Bottom: User / Login — sticky at bottom */}
-        <div className="px-3 pb-5 mt-auto">
+        <div className={`${collapsed ? "px-2" : "px-3"} pb-5 mt-auto`}>
           {isAuthenticated ? (
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800">
-              <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">
-                {user.initials}
+            <SidebarTooltip label={`${user.firstName} — ${user.tier}`} collapsed={collapsed} href="/dashboard">
+              <div className={`relative flex items-center ${collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-2.5 py-2.5"} rounded-lg bg-slate-800 group`}>
+                {/* Clickable area → Dashboard */}
+                <Link href="/dashboard" className="absolute inset-0 rounded-lg z-0" aria-label={`${user.firstName}'s dashboard`} />
+                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs shrink-0 relative z-[1] pointer-events-none">
+                  {user.initials}
+                </div>
+                {!collapsed && (
+                  <>
+                    <div className="flex-1 min-w-0 relative z-[1] pointer-events-none">
+                      <p className="text-sm font-semibold text-white truncate">{user.firstName} {user.lastName}</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-bold">{user.tier}</p>
+                    </div>
+                    {/* Logout icon — stops propagation so Link doesn't fire */}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onLogout(); }}
+                      className="relative z-[2] p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-slate-700 transition-colors cursor-pointer"
+                      title="Sign Out"
+                      aria-label="Sign out"
+                    >
+                      <LogOut size={14} />
+                    </button>
+                  </>
+                )}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{user.firstName}</p>
-                <p className="text-[10px] text-slate-500 uppercase font-bold">{user.tier}</p>
-              </div>
-            </div>
+            </SidebarTooltip>
           ) : (
-            <button
-              onClick={onLogin}
-              className="w-full px-4 py-2.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-all"
-            >
-              Log In / Join Free
-            </button>
+            <SidebarTooltip label="Log In / Join Free" collapsed={collapsed} onClick={onLogin} icon={LogIn} variant="cta">
+              <button
+                onClick={onLogin}
+                className={`${collapsed ? "w-10 h-10 p-0 flex items-center justify-center mx-auto cursor-pointer" : "w-full px-4 py-2.5"} text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-all`}
+              >
+                {collapsed ? <LogIn size={18} /> : <span>Log In / Join Free</span>}
+              </button>
+            </SidebarTooltip>
           )}
         </div>
       </div>
@@ -320,34 +432,37 @@ function Sidebar({ isAuthenticated, user, onLogin, collapsed, onToggle }) {
       {/* Collapse toggle button — narrow vertical bar on the right edge */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-[128px] w-3 h-16 bg-orange-600 hover:bg-orange-500 rounded-r flex items-center justify-center transition-colors z-50 shadow-md"
-        title="Collapse sidebar"
+        className={`absolute -right-4 top-[128px] w-4 h-14 bg-orange-600 hover:bg-orange-500 rounded-r-lg flex items-center justify-center transition-colors z-50 ${collapsed ? "shadow-[2px_2px_4px_rgba(0,0,0,0.2)]" : ""}`}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
-        <ChevronDown size={10} className="text-white rotate-90" />
+        <ChevronDown size={14} className={`text-white ${collapsed ? "-rotate-90" : "rotate-90"}`} />
       </button>
     </aside>
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   SIDEBAR EXPAND BUTTON — Shown when sidebar is collapsed
-   ═══════════════════════════════════════════════════ */
-function SidebarExpandButton({ onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="hidden lg:flex fixed left-0 top-[128px] w-3 h-16 bg-orange-600 hover:bg-orange-500 rounded-r items-center justify-center transition-colors z-50 shadow-md"
-      title="Expand sidebar"
-    >
-      <ChevronDown size={10} className="text-white -rotate-90" />
-    </button>
-  );
-}
+/* SidebarExpandButton removed — collapsed sidebar now always visible with icon-only mode */
 
 /* ═══════════════════════════════════════════════════
    HEADER — Top bar with For buyers/sellers, search, auth
    ═══════════════════════════════════════════════════ */
-function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency, setCurrency, onMobileNavToggle, onSetGuest, onSetFree, onSetPremium }) {
+const DEMO_CATEGORIES = [
+  { key: "electronics-technology", label: "Electronics & Technology", icon: Tv },
+  { key: "clothing-fashion", label: "Clothing & Fashion", icon: Shirt },
+  { key: "health-beauty", label: "Health & Beauty", icon: Flower2 },
+  { key: "home-garden", label: "Home & Garden", icon: Home },
+  { key: "toys-games", label: "Toys & Games", icon: Gamepad2 },
+  { key: "gifts-seasonal", label: "Gifts & Seasonal", icon: Gift },
+  { key: "sports-outdoors", label: "Sports & Outdoors", icon: Dumbbell },
+  { key: "jewellery-watches", label: "Jewellery & Watches", icon: Watch },
+  { key: "food-beverages", label: "Food & Beverages", icon: UtensilsCrossed },
+  { key: "pet-supplies", label: "Pet Supplies", icon: PawPrint },
+  { key: "baby-kids", label: "Baby & Kids", icon: Baby },
+  { key: "surplus-clearance", label: "Surplus & Clearance", icon: Boxes },
+  { key: "automotive-parts", label: "Automotive & Parts", icon: Car },
+];
+
+function Header({ isAuthenticated, isPremium, user, onLogin, onRegister, onLogout, currency, setCurrency, onMobileNavToggle, onSetDemoRole, demoRole, demoCategory, onSetDemoCategory, demoSupplierPro, onSetDemoSupplierPro, demoDealStatus, onSetDemoDealStatus, sidebarCollapsed }) {
   const userDd = useDropdown();
   const currencyDd = useDropdown();
   const buyersDd = useDropdown();
@@ -358,69 +473,129 @@ function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency,
   return (
     <header className="w-full bg-slate-900 sticky top-0 z-40">
       {/* Row 1: Utility bar — visible on all screen sizes */}
-      <div className="bg-slate-950 text-slate-300 text-xs">
-        <div className="px-4 sm:px-6 flex items-center justify-between h-8">
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* For Buyers Dropdown */}
+      <div className="bg-slate-950 text-slate-300 text-[13px]">
+        <div className={`${sidebarCollapsed ? "px-3 xl:px-3" : "px-4 sm:px-6"} flex items-center justify-between h-9`}>
+          <div className="flex items-center gap-2 sm:gap-4 xl:pl-3">
+            {/* For Buyers Dropdown — xl:pl-3 aligns "For retailers" with the
+                ≡ icon inside the Categories button in Row 2 (which has px-3). */}
             <div ref={buyersDd.ref} className="relative">
               <button onClick={() => buyersDd.setOpen(!buyersDd.open)}
-                className="flex items-center gap-1 text-orange-400 font-semibold hover:text-orange-300 transition-colors">
-                <span className="hidden sm:inline">For</span> <span className="hidden sm:inline">retailers</span><span className="sm:hidden">Retailers</span> <ChevronDown size={10} className={`transition-transform ${buyersDd.open ? "rotate-180" : ""}`} />
+                className={`flex items-center gap-1 font-medium transition-colors ${buyersDd.open ? "text-orange-300" : "text-orange-400 hover:text-orange-300"}`}
+                aria-label="Options for retailers"
+                aria-expanded={buyersDd.open}
+                aria-haspopup="true">
+                <span className="hidden sm:inline">For retailers</span><span className="sm:hidden">Retailers</span> <ChevronDown size={12} className={`transition-transform ${buyersDd.open ? "rotate-180" : ""}`} />
               </button>
               {buyersDd.open && (
-                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[170px]">
-                  <a href="/benefits" className="block px-3 py-2 text-xs text-slate-700 hover:bg-orange-50 hover:text-orange-600">Retailer Benefits</a>
-                  <a href="/register" className="block px-3 py-2 text-xs text-slate-700 hover:bg-orange-50 hover:text-orange-600">Register</a>
+                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[170px]" role="menu" aria-label="Retailer options">
+                  <a href="/benefits" role="menuitem" className="block px-3 py-2 text-xs text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors">Retailer Benefits</a>
+                  <a href="/register" role="menuitem" className="block px-3 py-2 text-xs text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors">Register</a>
                 </div>
               )}
             </div>
+            {/* Separator */}
+            <span className="hidden sm:block w-px h-3 bg-slate-700" aria-hidden="true" />
             {/* For Sellers Dropdown */}
             <div ref={sellersDd.ref} className="relative">
               <button onClick={() => sellersDd.setOpen(!sellersDd.open)}
-                className="flex items-center gap-1 text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
-                <span className="hidden sm:inline">For</span> <span className="hidden sm:inline">suppliers</span><span className="sm:hidden">Suppliers</span> <ChevronDown size={10} className={`transition-transform ${sellersDd.open ? "rotate-180" : ""}`} />
+                className={`flex items-center gap-1 font-medium transition-colors ${sellersDd.open ? "text-emerald-300" : "text-emerald-400 hover:text-emerald-300"}`}
+                aria-label="Options for suppliers"
+                aria-expanded={sellersDd.open}
+                aria-haspopup="true">
+                <span className="hidden sm:inline">For suppliers</span><span className="sm:hidden">Suppliers</span> <ChevronDown size={12} className={`transition-transform ${sellersDd.open ? "rotate-180" : ""}`} />
               </button>
               {sellersDd.open && (
-                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[170px]">
-                  <a href="/supplier-benefits" className="block px-3 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600">Supplier Benefits</a>
-                  <a href="/get-listed" className="block px-3 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600">Get Listed</a>
+                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[170px]" role="menu" aria-label="Supplier options">
+                  <a href="/supplier-benefits" role="menuitem" className="block px-3 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">Supplier Benefits</a>
+                  <a href="/get-listed" role="menuitem" className="block px-3 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors">Get Listed</a>
                 </div>
               )}
             </div>
-            <a href="/help" className="flex items-center gap-1 hover:text-white transition-colors"><HelpCircle size={12} /> Help</a>
+            {/* Separator */}
+            <span className="hidden sm:block w-px h-3 bg-slate-700" aria-hidden="true" />
+            <a href="/help" className="flex items-center gap-1 font-medium text-slate-400 hover:text-white transition-colors" aria-label="Help center"><HelpCircle size={12} /> Help</a>
             {/* Demo mode dropdown */}
             <div ref={demoDd.ref} className="relative hidden sm:block">
               <button onClick={() => demoDd.setOpen(!demoDd.open)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 text-amber-400 font-semibold hover:text-amber-300 transition-colors">
-                <SlidersHorizontal size={10} /> Demo <ChevronDown size={10} className={`transition-transform ${demoDd.open ? "rotate-180" : ""}`} />
+                className={`flex items-center gap-1 px-2 py-0.5 rounded font-semibold transition-all duration-150 active:scale-95 ${demoDd.open ? "bg-slate-700 text-amber-300" : "bg-slate-800 text-amber-400 hover:text-amber-300"}`}
+                aria-label="Demo mode switcher"
+                aria-expanded={demoDd.open}
+                aria-haspopup="true">
+                <SlidersHorizontal size={10} /> Demo <ChevronDown size={14} className={`transition-transform ${demoDd.open ? "rotate-180" : ""}`} />
               </button>
               {demoDd.open && (
-                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 p-2 z-50 min-w-[140px]">
+                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 p-2 z-50 min-w-[220px] max-h-[70vh] overflow-y-auto thin-scrollbar" role="menu" aria-label="Demo mode options">
                   <p className="px-2 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">View as</p>
                   <div className="flex flex-col gap-0.5">
-                    <button onClick={() => { onSetGuest(); demoDd.setOpen(false); }}
-                      className={`text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${!isAuthenticated ? "bg-orange-50 text-orange-700" : "text-slate-600 hover:bg-slate-50"}`}>Guest</button>
-                    <button onClick={() => { onSetFree(); demoDd.setOpen(false); }}
-                      className={`text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${isAuthenticated && !isPremium ? "bg-orange-50 text-orange-700" : "text-slate-600 hover:bg-slate-50"}`}>Free User</button>
-                    <button onClick={() => { onSetPremium(); demoDd.setOpen(false); }}
-                      className={`text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${isPremium ? "bg-orange-50 text-orange-700" : "text-slate-600 hover:bg-slate-50"}`}>Premium</button>
+                    {[
+                      { role: "guest", label: "Guest" },
+                      { role: "free", label: "Free" },
+                      { role: "standard", label: "Standard" },
+                      { role: "premium", label: "Premium" },
+                      { role: "premium-plus", label: "Premium+" },
+                      { role: "supplier-free", label: "Supplier Free" },
+                      { role: "supplier-premium", label: "Supplier Premium" },
+                    ].map((item) => (
+                      <button key={item.role} onClick={() => { onSetDemoRole(item.role); demoDd.setOpen(false); }} role="menuitem"
+                        className={`text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${demoRole === item.role ? "bg-orange-50 text-orange-700" : "text-slate-600 hover:bg-slate-50"}`}>{item.label}</button>
+                    ))}
+                  </div>
+                  <div className="my-1.5 border-t border-slate-100" />
+                  <p className="px-2 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product type</p>
+                  <div className="flex flex-col gap-0.5">
+                    {DEMO_CATEGORIES.map((cat) => {
+                      const Icon = cat.icon;
+                      return (
+                        <button key={cat.key} onClick={() => { onSetDemoCategory(cat.key); demoDd.setOpen(false); }} role="menuitem"
+                          className={`flex items-center gap-2 text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${demoCategory === cat.key ? "bg-amber-50 text-amber-700" : "text-slate-600 hover:bg-slate-50"}`}>
+                          <Icon size={13} className="shrink-0" /> {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="my-1.5 border-t border-slate-100" />
+                  <p className="px-2 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Listing tier</p>
+                  <div className="flex flex-col gap-0.5">
+                    {[
+                      { value: false, label: "Supplier Free" },
+                      { value: true, label: "Supplier Pro" },
+                    ].map((item) => (
+                      <button key={String(item.value)} onClick={() => { onSetDemoSupplierPro(item.value); demoDd.setOpen(false); }} role="menuitem"
+                        className={`text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${demoSupplierPro === item.value ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}>{item.label}</button>
+                    ))}
+                  </div>
+                  <div className="my-1.5 border-t border-slate-100" />
+                  <p className="px-2 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Deal status</p>
+                  <div className="flex flex-col gap-0.5">
+                    {[
+                      { value: "live", label: "Live Deal" },
+                      { value: "sold-out", label: "Sold Out Deal" },
+                    ].map((item) => (
+                      <button key={item.value} onClick={() => { onSetDemoDealStatus(item.value); demoDd.setOpen(false); }} role="menuitem"
+                        className={`text-left px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${demoDealStatus === item.value ? "bg-red-50 text-red-700" : "text-slate-600 hover:bg-slate-50"}`}>{item.label}</button>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-            <a href="/a-z" className="flex items-center gap-1 hover:text-white transition-colors"><BookOpen size={12} /> <span className="hidden sm:inline">A-Z Index</span><span className="sm:hidden">A-Z</span></a>
-            <div className="w-px h-3.5 bg-slate-700" />
+            <a href="/a-z" className="flex items-center gap-1 hover:text-white transition-colors" aria-label="Browse A-Z supplier index"><BookOpen size={12} /> <span className="hidden sm:inline">A-Z Index</span><span className="sm:hidden">A-Z</span></a>
+            <div className="w-px h-3.5 bg-slate-700" aria-hidden="true" />
             <div ref={currencyDd.ref} className="relative">
               <button onClick={() => currencyDd.setOpen(!currencyDd.open)}
-                className="flex items-center gap-1 hover:text-white transition-colors font-medium">
-                <Globe size={12} /> {currency.code} <ChevronDown size={10} className={`transition-transform ${currencyDd.open ? "rotate-180" : ""}`} />
+                className={`flex items-center gap-1 font-medium transition-colors ${currencyDd.open ? "text-white" : "hover:text-white"}`}
+                aria-label={`Currency: ${currency.code}`}
+                aria-expanded={currencyDd.open}
+                aria-haspopup="listbox">
+                <Globe size={12} /> {currency.code} <ChevronDown size={14} className={`transition-transform ${currencyDd.open ? "rotate-180" : ""}`} />
               </button>
               {currencyDd.open && (
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[110px]">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[110px]" role="listbox" aria-label="Select currency">
                   {CURRENCIES.map((c) => (
                     <button key={c.code} onClick={() => { setCurrency(c); currencyDd.setOpen(false); }}
+                      role="option"
+                      aria-selected={currency.code === c.code}
                       className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${currency.code === c.code ? "bg-orange-50 text-orange-700 font-semibold" : "text-slate-700 hover:bg-slate-50"}`}>
                       {c.symbol} {c.code}
                     </button>
@@ -428,8 +603,8 @@ function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency,
                 </div>
               )}
             </div>
-            <div className="w-px h-3.5 bg-slate-700 hidden md:block" />
-            <a href="mailto:service@wholesaleup.com" className="hidden md:flex items-center gap-1 hover:text-white transition-colors">
+            <div className="w-px h-3.5 bg-slate-700 hidden md:block" aria-hidden="true" />
+            <a href="mailto:service@wholesaleup.com" className="hidden md:flex items-center gap-1 hover:text-white transition-colors" aria-label="Email support">
               <Mail size={12} /> service@wholesaleup.com
             </a>
           </div>
@@ -440,13 +615,13 @@ function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency,
       <div className="px-4 sm:px-6 border-b border-slate-800">
         <div className="flex items-center gap-3 h-14">
           {/* Mobile hamburger + logo — visible only when sidebar is hidden */}
-          <div className="lg:hidden flex items-center gap-2 shrink-0">
+          <div className="xl:hidden flex items-center gap-2 shrink-0">
             <button
               onClick={onMobileNavToggle}
-              className="p-1.5 text-slate-400 hover:text-orange-400 rounded-lg transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-150"
               aria-label="Open navigation"
             >
-              <Menu size={22} />
+              <Menu size={22} strokeWidth={2.5} />
             </button>
             <WholesaleUpLogo size="small" />
           </div>
@@ -455,44 +630,61 @@ function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency,
           <CategoriesButton />
 
           {/* Search Bar (desktop) */}
-          <div className="hidden lg:flex flex-1 mx-4">
+          <div className="hidden xl:flex flex-1 mx-4">
             <HeaderSearchBar />
           </div>
 
           {/* Right Side */}
-          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          <div className="flex items-center gap-0.5 sm:gap-1 ml-auto shrink-0">
             {/* Mobile search toggle */}
             <button
               onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-              className="lg:hidden p-2 text-slate-400 hover:text-orange-400 rounded-lg"
+              className="xl:hidden w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-150"
+              aria-label="Search"
             >
               <Search size={20} />
             </button>
-            <button className="p-2 text-slate-400 hover:text-orange-400 rounded-lg relative">
+            {/* Favourites */}
+            <button
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-150 relative"
+              aria-label="Favourites"
+            >
               <Heart size={20} />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">5</span>
+              <span className="absolute top-1 right-0.5 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none">5</span>
             </button>
             {isAuthenticated ? (
               <>
-                <button className="p-2 text-slate-400 hover:text-orange-400 rounded-lg relative">
-                  <Bell size={20} /><span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">3</span>
+                {/* Notifications */}
+                <button
+                  className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-150 relative"
+                  aria-label="Notifications"
+                >
+                  <Bell size={20} />
+                  <span className="absolute top-1 right-0.5 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none">3</span>
                 </button>
+                {/* User avatar */}
                 <div ref={userDd.ref} className="relative">
                   <button onClick={() => userDd.setOpen(!userDd.open)}
-                    className="flex items-center gap-1.5 p-1 pr-2 rounded-lg hover:bg-slate-800">
+                    className="flex items-center gap-1.5 p-1 pr-2 rounded-lg hover:bg-slate-800 active:scale-95 transition-all duration-150"
+                    aria-label="Account menu"
+                  >
                     <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xs">{user.initials}</div>
                     <span className="hidden sm:inline text-sm font-semibold text-slate-200">{user.firstName}</span>
-                    <ChevronDown size={14} className={`text-slate-400 hidden sm:block ${userDd.open ? "rotate-180" : ""}`} />
+                    <ChevronDown size={14} className={`text-slate-400 hidden sm:block transition-transform ${userDd.open ? "rotate-180" : ""}`} />
                   </button>
                   {userDd.open && <UserDropdownMenu user={user} onLogout={onLogout} onClose={() => userDd.setOpen(false)} />}
                 </div>
               </>
             ) : (
-              <LoginDropdown onLogin={onLogin} />
+              <LoginDropdown onLogin={onLogin} onRegister={onRegister} />
             )}
-            <button className="p-2 text-slate-400 hover:text-orange-400 rounded-lg relative">
-              <ShoppingCart size={20} />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">3</span>
+            {/* Enquiry List */}
+            <button
+              className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95 rounded-lg transition-all duration-150 relative"
+              aria-label="Enquiry list"
+            >
+              <ClipboardList size={20} />
+              <span className="absolute top-1 right-0.5 w-4 h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none">3</span>
             </button>
           </div>
         </div>
@@ -500,7 +692,7 @@ function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency,
 
       {/* Mobile Search Bar — slides open below header */}
       {mobileSearchOpen && (
-        <div className="lg:hidden px-4 py-3 border-b border-slate-800 bg-slate-900">
+        <div className="xl:hidden px-4 py-3 border-b border-slate-800 bg-slate-900">
           <HeaderSearchBar mobile />
         </div>
       )}
@@ -512,7 +704,7 @@ function Header({ isAuthenticated, isPremium, user, onLogin, onLogout, currency,
 /* ═══════════════════════════════════════════════════
    LOGIN DROPDOWN — hover panel with menu sections
    ═══════════════════════════════════════════════════ */
-function LoginDropdown({ onLogin }) {
+function LoginDropdown({ onLogin, onRegister }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const timeout = useRef(null);
@@ -530,14 +722,14 @@ function LoginDropdown({ onLogin }) {
     {
       items: [
         { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-        { label: "Account Profile", icon: Settings, href: "/account" },
+        { label: "Account Profile", icon: Settings, href: "/dashboard/account-profile" },
         { label: "Messages", icon: MessageSquare, href: "/messages" },
       ],
     },
     {
       title: "Buyers Tools",
       items: [
-        { label: "Buyer Profile", icon: ClipboardList, href: "/buyer-profile" },
+        { label: "Buyer Profile", icon: ClipboardList, href: "/dashboard/buyer-profile" },
         { label: "My Pre-Orders", icon: Clock, href: "/pre-orders" },
         { label: "My Favorites", icon: Heart, href: "/favorites" },
       ],
@@ -545,7 +737,7 @@ function LoginDropdown({ onLogin }) {
     {
       title: "Supplier Tools",
       items: [
-        { label: "Supplier Profile", icon: Store, href: "/supplier-profile" },
+        { label: "Supplier Profile", icon: Store, href: "/dashboard/supplier-profile" },
         { label: "Manage Deals", icon: Archive, href: "/manage-deals" },
         { label: "Add New Deal", icon: PlusCircle, href: "/add-deal" },
       ],
@@ -560,11 +752,13 @@ function LoginDropdown({ onLogin }) {
   ];
 
   return (
-    <div className="relative flex items-center gap-1.5 sm:gap-2">
+    <div className="relative flex items-center gap-1 sm:gap-2">
       <div ref={ref} className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
-        <a href="/login" onClick={(e) => { e.preventDefault(); onLogin(); }}
-          className="inline-flex items-center justify-center gap-1.5 p-2 sm:px-4 sm:py-1.5 text-sm font-semibold text-slate-300 border border-slate-600 hover:border-orange-400 hover:text-orange-400 rounded-full transition-colors">
-          <User size={16} /> <span className="hidden sm:inline">Log In</span>
+        <a href="/register#login" onClick={(e) => { e.preventDefault(); onLogin(); }}
+          className="inline-flex items-center justify-center gap-1.5 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 sm:border sm:border-slate-600 sm:hover:border-orange-400 sm:hover:text-orange-400 sm:hover:bg-transparent rounded-lg sm:rounded-full active:scale-95 transition-all duration-150"
+          aria-label="Log In"
+        >
+          <User size={20} className="text-slate-400" /> <span className="hidden sm:inline">Log In</span>
         </a>
 
         {open && (
@@ -596,10 +790,12 @@ function LoginDropdown({ onLogin }) {
         </div>
       )}
       </div>
-      <a href="/register"
-        className="inline-flex items-center justify-center px-3 sm:px-4 py-1.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-full transition-all shadow-sm">
+      <button onClick={onRegister}
+        className="inline-flex items-center justify-center h-10 px-3.5 sm:px-5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 active:scale-95 rounded-full transition-all duration-150 shadow-sm"
+        aria-label="Join Free"
+      >
         <span className="sm:hidden">Join</span><span className="hidden sm:inline">Join Free</span>
-      </a>
+      </button>
     </div>
   );
 }
@@ -684,15 +880,20 @@ function HeaderSearchBar({ mobile = false }) {
         <div ref={ref} className="relative shrink-0">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className={`flex items-center gap-1.5 border-r border-slate-700 px-3 ${py} text-xs font-semibold text-slate-300 hover:text-white transition-colors`}
+            className={`flex items-center gap-1.5 border-r border-slate-700 px-3 ${py} text-sm font-semibold text-slate-300 hover:text-white transition-all duration-150`}
+            aria-label={`Search type: ${searchType}`}
+            aria-expanded={dropdownOpen}
+            aria-haspopup="listbox"
           >
             {searchType}
             <ChevronDown size={12} className={`text-slate-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
           </button>
           {dropdownOpen && (
-            <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[160px]">
+            <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-50 min-w-[160px]" role="listbox" aria-label="Search type">
               {searchTypes.map((t) => (
                 <button key={t} onClick={() => { setSearchType(t); setDropdownOpen(false); }}
+                  role="option"
+                  aria-selected={searchType === t}
                   className={`w-full text-left px-3 py-2 text-sm transition-colors ${searchType === t ? "bg-orange-50 text-orange-700 font-semibold" : "text-slate-600 hover:bg-slate-50"}`}>
                   {t}
                 </button>
@@ -707,23 +908,31 @@ function HeaderSearchBar({ mobile = false }) {
           onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); setSelectedIndex(-1); }}
           onFocus={() => setSearchOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={mobile ? "What are you looking for?" : "What are you looking for?"}
+          placeholder="What are you looking for?"
           className={`flex-1 px-3 ${py} text-sm text-white placeholder-slate-500 focus:outline-none bg-transparent min-w-0`}
           autoFocus={mobile}
+          role="combobox"
+          aria-label="Search products"
+          aria-expanded={searchOpen}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
         />
         {/* Search button */}
-        <button className={`px-4 ${py} bg-orange-500 hover:bg-orange-600 text-white transition-colors flex items-center gap-1.5 shrink-0 rounded-r-lg`}>
+        <button
+          className={`px-4 ${py} bg-orange-500 hover:bg-orange-600 active:scale-95 text-white transition-all duration-150 flex items-center gap-1.5 shrink-0 rounded-r-lg`}
+          aria-label="Search"
+        >
           <Search size={16} />
-          {!mobile && <span className="text-sm font-semibold hidden lg:inline">Search</span>}
+          {!mobile && <span className="text-sm font-semibold hidden xl:inline">Search</span>}
         </button>
       </div>
 
       {/* Search suggestions dropdown */}
       {searchOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 max-h-[70vh] overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 max-h-[70vh] overflow-y-auto thin-scrollbar" role="listbox" aria-label="Search suggestions">
           {/* Search for "query" */}
           {query.length > 0 && (
-            <a href={`/deals?q=${encodeURIComponent(query)}`} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-100">
+            <a href={`/deals?any=${encodeURIComponent(query)}`} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-100">
               <Search size={16} className="text-slate-400 shrink-0" />
               <span className="text-sm text-slate-700">Search for &ldquo;<span className="font-semibold">{query}</span>&rdquo;</span>
             </a>
@@ -732,16 +941,18 @@ function HeaderSearchBar({ mobile = false }) {
           {/* Recent searches */}
           {recentItems.length > 0 && (
             <div className="py-2">
-              <p className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recent</p>
+              <p className="px-4 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Recent</p>
               {recentItems.map((item) => {
                 const idx = runningIndex++;
                 return (
                   <div key={item} className={`flex items-center justify-between px-4 py-2.5 transition-colors cursor-pointer ${selectedIndex === idx ? "bg-orange-50" : "hover:bg-slate-50"}`}>
-                    <a href={`/deals?q=${encodeURIComponent(item)}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <a href={`/deals?any=${encodeURIComponent(item)}`} className="flex items-center gap-3 flex-1 min-w-0">
                       <Clock size={16} className="text-slate-400 shrink-0" />
                       <span className="text-sm text-slate-700 truncate">{item}</span>
                     </a>
-                    <button onClick={(e) => { e.stopPropagation(); removeRecent(item); }} className="p-1 text-slate-300 hover:text-slate-500 transition-colors shrink-0">
+                    <button onClick={(e) => { e.stopPropagation(); removeRecent(item); }}
+                      className="w-7 h-7 flex items-center justify-center text-slate-300 hover:text-slate-500 hover:bg-slate-100 rounded-md transition-colors shrink-0"
+                      aria-label={`Remove ${item} from recent searches`}>
                       <X size={14} />
                     </button>
                   </div>
@@ -752,11 +963,11 @@ function HeaderSearchBar({ mobile = false }) {
 
           {/* Most popular */}
           <div className={`py-2 ${recentItems.length > 0 ? "border-t border-slate-100" : ""}`}>
-            <p className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Most Popular</p>
+            <p className="px-4 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Most Popular</p>
             {SEARCH_POPULAR.map((item) => {
               const idx = runningIndex++;
               return (
-                <a key={item} href={`/deals?q=${encodeURIComponent(item)}`} className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedIndex === idx ? "bg-orange-50" : "hover:bg-slate-50"}`}>
+                <a key={item} href={`/deals?any=${encodeURIComponent(item)}`} className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedIndex === idx ? "bg-orange-50" : "hover:bg-slate-50"}`}>
                   <TrendingUp size={16} className="text-slate-400 shrink-0" />
                   <span className="text-sm text-slate-700">{item}</span>
                 </a>
@@ -764,16 +975,20 @@ function HeaderSearchBar({ mobile = false }) {
             })}
           </div>
 
-          {/* Products */}
+          {/* Deals */}
           {filteredProducts.length > 0 && (
             <div className="py-2 border-t border-slate-100">
-              <p className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Products</p>
+              <p className="px-4 py-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider">Deals</p>
               {filteredProducts.map((product) => {
                 const idx = runningIndex++;
                 return (
-                  <a key={product.name} href="/single-deal" className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedIndex === idx ? "bg-orange-50" : "hover:bg-slate-50"}`}>
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  <a key={product.name} href="/deal" className={`flex items-center gap-3 px-4 py-2.5 transition-colors ${selectedIndex === idx ? "bg-orange-50" : "hover:bg-slate-50"}`}>
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center relative">
+                      {product.image ? (
+                        <Image src={product.image} alt={product.name} fill className="object-cover" sizes="40px" />
+                      ) : (
+                        <Package size={16} className="text-slate-200" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-700 leading-snug line-clamp-2">{product.name}</p>
@@ -784,6 +999,12 @@ function HeaderSearchBar({ mobile = false }) {
               })}
             </div>
           )}
+
+          {/* View all results footer */}
+          <a href={`/deals${query ? `?any=${encodeURIComponent(query)}` : ""}`}
+            className="flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-t border-slate-200 transition-colors rounded-b-xl">
+            View all results <ArrowRight size={14} />
+          </a>
         </div>
       )}
     </div>
@@ -810,27 +1031,32 @@ function CategoriesButton() {
   }, []);
 
   return (
-    <div ref={ref} className="relative hidden lg:block">
+    <div ref={ref} className="relative hidden xl:block">
       <button onClick={() => { setOpen(!open); setHoveredCat(null); }}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-200 hover:text-orange-400 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors">
+        className={`flex items-center gap-2 h-10 px-3 text-sm font-semibold rounded-lg border transition-all duration-150 active:scale-95 ${open ? "text-orange-400 bg-slate-700 border-orange-500/40" : "text-slate-200 hover:text-orange-400 bg-slate-800 hover:bg-slate-700 border-slate-700"}`}
+        aria-label="Browse categories"
+        aria-expanded={open}
+        aria-haspopup="true">
         <Menu size={16} /> Categories
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 flex" style={{ minWidth: hoveredCat !== null ? "620px" : "340px" }}>
+        <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 flex" role="menu" aria-label="Product categories" style={{ minWidth: hoveredCat !== null ? "620px" : "340px" }}>
           {/* Categories list */}
-          <div className="w-[340px] max-h-[70vh] overflow-y-auto py-2 border-r border-slate-100">
+          <div className="w-[340px] max-h-[70vh] overflow-y-auto thin-scrollbar py-2 border-r border-slate-100">
             {CATEGORY_LIST.map((cat, idx) => (
               <a
                 key={cat.name}
                 href={cat.href}
                 onMouseEnter={() => setHoveredCat(idx)}
-                className={`flex items-center justify-between px-4 py-3 text-sm transition-colors group ${
+                className={`flex items-center justify-between px-4 py-1.5 text-sm transition-colors group ${
                   hoveredCat === idx ? "bg-orange-50 text-orange-600" : "text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <cat.icon size={18} className={hoveredCat === idx ? "text-orange-500" : "text-slate-400"} />
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-6 h-6 shrink-0 ${hoveredCat === idx ? "text-orange-500" : "text-slate-400"}`}>
+                    {CATEGORY_ILLUSTRATIONS[cat.name] || <cat.icon size={20} />}
+                  </div>
                   <span className="font-medium">{cat.name}</span>
                 </div>
                 <ChevronRight size={14} className={hoveredCat === idx ? "text-orange-400" : "text-slate-300"} />
@@ -840,16 +1066,16 @@ function CategoriesButton() {
 
           {/* Subcategories panel */}
           {hoveredCat !== null && (
-            <div className="w-[280px] max-h-[70vh] overflow-y-auto py-3 px-2">
+            <div className="w-[280px] max-h-[70vh] overflow-y-auto thin-scrollbar py-3 px-2">
               <div className="border-b border-dashed border-slate-200 pb-2 mb-2 px-2">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   {CATEGORY_LIST[hoveredCat].name}
                 </p>
               </div>
               {CATEGORY_LIST[hoveredCat].subs.map((sub) => (
-                <a key={sub} href="#"
+                <a key={sub.label} href={sub.href}
                   className="block px-3 py-2.5 text-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
-                  {sub}
+                  {sub.label}
                 </a>
               ))}
             </div>
@@ -868,14 +1094,14 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
     {
       items: [
         { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-        { icon: User, label: "Account Profile", href: "/account-profile" },
+        { icon: User, label: "Account Profile", href: "/dashboard/account-profile" },
         { icon: MessageSquare, label: "Messages", href: "/messages", badge: 3 },
       ],
     },
     {
       title: "Buyer Tools",
       items: [
-        { icon: ShoppingBag, label: "Buyer Profile", href: "/buyer-profile" },
+        { icon: ShoppingBag, label: "Buyer Profile", href: "/dashboard/buyer-profile" },
         { icon: Clock, label: "My Pre-Orders", href: "/pre-orders" },
         { icon: Heart, label: "My Favourites", href: "/favourites" },
       ],
@@ -883,7 +1109,7 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
     {
       title: "Supplier Tools",
       items: [
-        { icon: Store, label: "Supplier Profile", href: "/supplier-profile" },
+        { icon: Store, label: "Supplier Profile", href: "/dashboard/supplier-profile" },
         { icon: Package, label: "Manage Deals", href: "/manage-deals" },
         { icon: PlusCircle, label: "Add New Deal", href: "/add-deal" },
       ],
@@ -910,11 +1136,11 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
             </span>
           </div>
         </div>
-        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400">
-          <span>Expires: {user.expiresOn}</span><span>PIN: {user.pin}</span>
+        <div className="mt-2.5 flex items-center justify-between text-xs text-slate-400">
+          <span>Expires: {user.expiresOn || "N/A"}</span>{user.pin && <span>PIN: {user.pin}</span>}
         </div>
       </div>
-      {user.tier === "STANDARD" && (
+      {user.tier !== "PRO" && user.tier !== "ENTERPRISE" && user.tier !== "PREMIUM" && (
         <a href="/pricing" className="block mx-3 mt-3 px-3 py-2 rounded-lg bg-orange-500 text-white text-xs font-semibold text-center hover:bg-orange-600 transition-all shadow-sm">
           Upgrade to Premium — Unlock All Suppliers
         </a>
@@ -945,59 +1171,172 @@ function UserDropdownMenu({ user, onLogout, onClose }) {
 }
 
 /* ═══════════════════════════════════════════════════
+   MOBILE NAV SEARCH — Search bar with type dropdown
+   ═══════════════════════════════════════════════════ */
+function MobileNavSearch({ onClose }) {
+  const [searchType, setSearchType] = useState("Deals");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const dropdownRef = useRef(null);
+  const searchTypes = ["Deals", "Suppliers", "Importers", "Distributors", "Liquidators", "Wholesalers", "Dropshippers"];
+
+  useEffect(() => {
+    const handler = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdownOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div className="px-4 pt-3 pb-3 border-b border-slate-800">
+      <div className="flex items-center rounded-lg overflow-visible relative">
+        <div ref={dropdownRef} className="relative shrink-0">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-1 px-2.5 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 border border-slate-700 rounded-l-lg transition-all duration-200"
+          >
+            {searchType}
+            <ChevronDown size={11} className={`text-slate-500 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute left-0 top-full mt-1 bg-slate-800 rounded-lg shadow-xl border border-slate-700 py-1 z-50 min-w-[150px]">
+              {searchTypes.map((t) => (
+                <button key={t} onClick={() => { setSearchType(t); setDropdownOpen(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${searchType === t ? "bg-orange-500/15 text-orange-400 font-semibold" : "text-slate-300 hover:bg-slate-700"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-1 items-center bg-slate-800 border border-l-0 border-slate-700 rounded-r-lg relative">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search..."
+            className="flex-1 pl-2.5 pr-8 py-2 text-xs text-white placeholder-slate-500 bg-transparent focus:outline-none min-w-0"
+          />
+          <Search size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
    MOBILE NAV DRAWER
    ═══════════════════════════════════════════════════ */
-function MobileNav({ open, onClose, isAuthenticated, isPremium, onLogin, onSetGuest, onSetFree, onSetPremium }) {
+function MobileNav({ open, onClose, isAuthenticated, isPremium, onLogin, onRegister, onSetDemoRole, demoRole, demoCategory, onSetDemoCategory, demoSupplierPro, onSetDemoSupplierPro, demoDealStatus, onSetDemoDealStatus }) {
   if (!open) return null;
   return (
-    <div className="lg:hidden fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-2xl overflow-y-auto">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-          <WholesaleUpLogo size="small" dark />
-          <button onClick={onClose} className="p-1 text-slate-500 hover:text-slate-700"><X size={20} /></button>
+    <div className="xl:hidden fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="absolute left-0 top-0 bottom-0 w-72 bg-slate-900 shadow-2xl overflow-y-auto thin-scrollbar">
+        {/* Header */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <WholesaleUpLogo size="small" />
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white transition-colors"><X size={20} /></button>
         </div>
-        {/* Demo mode controls — mobile/tablet */}
-        <div className="p-3 border-b border-slate-100 bg-amber-50/60">
-          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1.5 px-1">Demo Mode</p>
-          <div className="flex items-center gap-1 bg-white rounded-lg p-0.5 border border-amber-200">
-            <button onClick={() => { onSetGuest(); }}
-              className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md transition-all ${!isAuthenticated ? "bg-amber-100 text-amber-800 shadow-sm" : "text-slate-500"}`}>Guest</button>
-            <button onClick={() => { onSetFree(); }}
-              className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md transition-all ${isAuthenticated && !isPremium ? "bg-amber-100 text-amber-800 shadow-sm" : "text-slate-500"}`}>Free</button>
-            <button onClick={() => { onSetPremium(); }}
-              className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md transition-all ${isPremium ? "bg-amber-100 text-amber-800 shadow-sm" : "text-slate-500"}`}>Premium</button>
+        {/* Demo mode controls */}
+        <div className="p-3 border-b border-slate-800 bg-slate-800/50">
+          <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1.5 px-1">Demo Mode</p>
+          <div className="flex flex-wrap items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700">
+            {[
+              { role: "guest", label: "Guest" },
+              { role: "free", label: "Free" },
+              { role: "standard", label: "Standard" },
+              { role: "premium", label: "Premium" },
+              { role: "premium-plus", label: "Premium+" },
+              { role: "supplier-free", label: "Sup. Free" },
+              { role: "supplier-premium", label: "Sup. Prem." },
+            ].map((item) => (
+              <button key={item.role} onClick={() => onSetDemoRole(item.role)}
+                className={`px-2 py-1.5 text-[10px] font-semibold rounded-md transition-all ${demoRole === item.role ? "bg-amber-500/20 text-amber-400 shadow-sm" : "text-slate-500"}`}>{item.label}</button>
+            ))}
+          </div>
+          <div className="mt-2">
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1.5 px-1">Product Type</p>
+            <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto thin-scrollbar bg-slate-900 rounded-lg p-1 border border-slate-700">
+              {DEMO_CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <button key={cat.key} onClick={() => onSetDemoCategory(cat.key)}
+                    className={`flex items-center gap-2 text-left px-2 py-1.5 text-[10px] font-semibold rounded-md transition-all ${demoCategory === cat.key ? "bg-amber-500/20 text-amber-400 shadow-sm" : "text-slate-500 hover:text-slate-300"}`}>
+                    <Icon size={12} className="shrink-0" /> {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1.5 px-1">Listing Tier</p>
+            <div className="flex flex-wrap items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700">
+              {[
+                { value: false, label: "Supplier Free" },
+                { value: true, label: "Supplier Pro" },
+              ].map((item) => (
+                <button key={String(item.value)} onClick={() => onSetDemoSupplierPro(item.value)}
+                  className={`px-2 py-1.5 text-[10px] font-semibold rounded-md transition-all ${demoSupplierPro === item.value ? "bg-blue-500/20 text-blue-400 shadow-sm" : "text-slate-500"}`}>{item.label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-2">
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1.5 px-1">Deal Status</p>
+            <div className="flex flex-wrap items-center gap-1 bg-slate-900 rounded-lg p-1 border border-slate-700">
+              {[
+                { value: "live", label: "Live Deal" },
+                { value: "sold-out", label: "Sold Out" },
+              ].map((item) => (
+                <button key={item.value} onClick={() => onSetDemoDealStatus(item.value)}
+                  className={`px-2 py-1.5 text-[10px] font-semibold rounded-md transition-all ${demoDealStatus === item.value ? "bg-red-500/20 text-red-400 shadow-sm" : "text-slate-500"}`}>{item.label}</button>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="p-4 border-b border-slate-100">
-          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
-            <input type="text" placeholder="Search..." className="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none" />
-            <button className="px-3 py-2.5 text-orange-500"><Search size={18} /></button>
+        {/* Search */}
+        <MobileNavSearch onClose={onClose} />
+        {/* Dashboard — shown when authenticated */}
+        {isAuthenticated && (
+          <div className="px-3 py-3 border-b border-slate-800">
+            <p className="px-3 pt-1 pb-2 text-[10px] font-bold text-orange-500 uppercase tracking-wider">Dashboard</p>
+            {DASHBOARD_NAV_LINKS.map((link) => (
+              <Link key={link.label} href={link.href} onClick={onClose}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+                <link.icon size={16} className="text-slate-500 shrink-0" />
+                <span className="flex-1">{link.label}</span>
+                {link.badge && (
+                  <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">{link.badge}</span>
+                )}
+              </Link>
+            ))}
           </div>
-        </div>
-        <div className="p-4 border-b border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Categories</p>
-          {CATEGORY_LIST.map((cat) => (
-            <a key={cat.name} href={cat.href} onClick={onClose}
-              className="flex items-center gap-3 px-2 py-2.5 text-sm text-slate-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
-              <cat.icon size={16} className="text-slate-400" /> {cat.name}
-            </a>
-          ))}
-        </div>
-        <div className="p-4 border-b border-slate-100">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Browse</p>
+        )}
+        {/* Browse */}
+        <div className="px-3 py-3 border-b border-slate-800">
+          <p className="px-3 pt-1 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Browse</p>
           {SECTION_NAV_LINKS.map((link) => (
             <a key={link.label} href={link.href} onClick={onClose}
-              className="block px-2 py-2.5 text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
+              className="block px-3 py-2.5 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
               {link.label}
             </a>
           ))}
         </div>
+        {/* Categories */}
+        <div className="px-3 py-3 border-b border-slate-800">
+          <p className="px-3 pt-1 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Categories</p>
+          {CATEGORY_LIST.map((cat) => (
+            <a key={cat.name} href={cat.href} onClick={onClose}
+              className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+              <div className="w-4 h-4 shrink-0 text-slate-500">{CATEGORY_ILLUSTRATIONS[cat.name] || <cat.icon size={16} />}</div> {cat.name}
+            </a>
+          ))}
+        </div>
+        {/* Auth buttons */}
         {!isAuthenticated && (
-          <div className="p-4 space-y-2">
+          <div className="p-4 pb-12 space-y-2">
             <button onClick={() => { onLogin(); onClose(); }}
-              className="w-full px-4 py-2.5 text-sm font-semibold text-slate-700 border border-slate-200 rounded-lg hover:bg-slate-50">Log In</button>
-            <a href="/register" className="block w-full px-4 py-2.5 text-sm font-bold text-white bg-orange-500 rounded-lg text-center">Join Free</a>
+              className="w-full px-4 py-2.5 text-sm font-semibold text-slate-300 border border-slate-700 rounded-lg hover:bg-slate-800 hover:text-white shadow-[0px_2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200">Log In</button>
+            <button onClick={() => { onRegister(); onClose(); }} className="block w-full px-4 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg text-center shadow-[0px_2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.3)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200">Join Free</button>
           </div>
         )}
       </div>
@@ -1005,310 +1344,363 @@ function MobileNav({ open, onClose, isAuthenticated, isPremium, onLogin, onSetGu
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   FOOTER COUNTRIES LIST
-   ═══════════════════════════════════════════════════ */
-const FOOTER_COUNTRIES = [
-  { name: "Global", code: null },
-  { name: "United States", code: "us" },
-  { name: "United Kingdom", code: "gb" },
-  { name: "Germany", code: "de" },
-  { name: "France", code: "fr" },
-  { name: "Italy", code: "it" },
-  { name: "Spain", code: "es" },
-  { name: "India", code: "in" },
-  { name: "Russia", code: "ru" },
-  { name: "Portugal", code: "pt" },
-  { name: "Netherlands", code: "nl" },
-  { name: "Romania", code: "ro" },
-  { name: "Denmark", code: "dk" },
-  { name: "Sweden", code: "se" },
-  { name: "Norway", code: "no" },
-  { name: "Slovakia", code: "sk" },
-  { name: "Bulgaria", code: "bg" },
-  { name: "Turkey", code: "tr" },
-  { name: "Hungary", code: "hu" },
-  { name: "Greece", code: "gr" },
-  { name: "Czech Republic", code: "cz" },
-  { name: "Austria", code: "at" },
-  { name: "Poland", code: "pl" },
-  { name: "Croatia", code: "hr" },
-  { name: "China", code: "cn" },
-  { name: "Indonesia", code: "id" },
-  { name: "Vietnam", code: "vn" },
-  { name: "Thailand", code: "th" },
-  { name: "Korea", code: "kr" },
-  { name: "Japan", code: "jp" },
-];
+/* ── Exit Popup Testimonial Carousel (arrows + swipe + auto-scroll, no dots) ── */
+function ExitPopupTestimonialCarousel() {
+  const [current, setCurrent] = useState(0);
+  const total = EXIT_POPUP_TESTIMONIALS.length;
+  const touchStartX = useRef(null);
 
-const NEWSLETTER_CATEGORIES = CATEGORY_LIST.map((c) => c.name);
+  // Auto-advance every 4 seconds (pauses when tab hidden)
+  const { reset: resetCarousel } = useVisibilityInterval(() => {
+    setCurrent((c) => (c + 1) % total);
+  }, 4000);
 
-/* ═══════════════════════════════════════════════════
-   FOOTER — COUNTRY SELECTOR
-   ═══════════════════════════════════════════════════ */
-function FooterCountrySelector() {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(FOOTER_COUNTRIES[0]);
-  const ref = useRef(null);
+  const prev = () => { setCurrent((c) => (c - 1 + total) % total); resetCarousel(); };
+  const next = () => { setCurrent((c) => (c + 1) % total); resetCarousel(); };
 
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-lg transition-colors"
-      >
-        {selected.code ? (
-          <img src={`https://flagcdn.com/20x15/${selected.code}.png`} alt={selected.name} className="w-5 h-4 object-cover rounded-sm" />
-        ) : (
-          <Globe size={16} className="text-slate-400" />
-        )}
-        <span>{selected.name}</span>
-        <ChevronDown size={14} className={`text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full mb-2 left-0 w-56 max-h-72 overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200 py-1 z-50">
-          {FOOTER_COUNTRIES.map((country) => (
-            <button
-              key={country.name}
-              onClick={() => { setSelected(country); setOpen(false); }}
-              className={`w-full text-left flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                selected.name === country.name ? "bg-orange-50 text-orange-700 font-semibold" : "text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              {country.code ? (
-                <img src={`https://flagcdn.com/20x15/${country.code}.png`} alt={country.name} className="w-5 h-4 object-cover rounded-sm" />
-              ) : (
-                <Globe size={16} className="text-slate-400" />
-              )}
-              {country.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   FOOTER — NEWSLETTER CATEGORY MULTI-SELECT
-   ═══════════════════════════════════════════════════ */
-function NewsletterCategorySelect() {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState([]);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const toggle = (cat) => {
-    setSelected((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
+  // Touch/swipe handlers
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) { diff > 0 ? next() : prev(); }
+    touchStartX.current = null;
   };
 
-  const label = selected.length === 0
-    ? "All Categories"
-    : selected.length === 1
-    ? selected[0]
-    : `${selected.length} categories`;
+  const t = EXIT_POPUP_TESTIMONIALS[current];
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full h-[42px] px-3 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-      >
-        <span className="flex-1 text-left truncate">{label}</span>
-        <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open && (
-        <div className="absolute bottom-full mb-2 left-0 w-full min-w-[220px] max-h-64 overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200 py-1 z-50">
-          <button
-            onClick={() => setSelected([])}
-            className={`w-full text-left flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-              selected.length === 0 ? "bg-orange-50 text-orange-700 font-semibold" : "text-slate-500 hover:bg-slate-50"
-            }`}
-          >
-            <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-              selected.length === 0 ? "bg-orange-500 border-orange-500" : "border-slate-300"
-            }`}>
-              {selected.length === 0 && (
-                <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              )}
-            </div>
-            All Categories
-          </button>
-          {NEWSLETTER_CATEGORIES.map((cat) => {
-            const isChecked = selected.includes(cat);
-            return (
-              <button
-                key={cat}
-                onClick={() => toggle(cat)}
-                className={`w-full text-left flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                  isChecked ? "bg-orange-50 text-orange-700 font-medium" : "text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                  isChecked ? "bg-orange-500 border-orange-500" : "border-slate-300"
-                }`}>
-                  {isChecked && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  )}
-                </div>
-                {cat}
-              </button>
-            );
-          })}
+    <div className="relative group" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="bg-gradient-to-br from-white/12 to-white/[0.04] backdrop-blur-sm rounded-xl p-3.5 border border-white/15 overflow-hidden">
+        <div className="flex gap-0.5 justify-center mb-2">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} size={11} className="text-amber-400 fill-amber-400" />
+          ))}
         </div>
-      )}
+        <div className="relative min-h-[48px]">
+          <p key={current} className="text-xs text-white/90 italic leading-relaxed animate-[swTestimonialFade_0.4s_ease]">
+            &ldquo;{t.text}&rdquo;
+          </p>
+        </div>
+        <p className="text-[10px] font-semibold text-sky-200/60 mt-1.5">&mdash; {t.author}, {t.label}</p>
+      </div>
+
+      {/* Navigation arrows — always visible */}
+      <button onClick={prev} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all opacity-80 hover:opacity-100" aria-label="Previous testimonial">
+        <ChevronDown size={12} className="rotate-90" />
+      </button>
+      <button onClick={next} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all opacity-80 hover:opacity-100" aria-label="Next testimonial">
+        <ChevronDown size={12} className="-rotate-90" />
+      </button>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════
-   FOOTER
+   SITEWIDE EXIT-INTENT POPUP — Guest registration nudge
+   Triggered when mouse leaves browser viewport (address bar).
+   Shown once per session for guest users. Excluded from /pricing
+   (which has its own exit-intent popup).
+   Morphs seamlessly into the AuthModal on "Register Free Now" click.
    ═══════════════════════════════════════════════════ */
-function Footer() {
-  const footerLinks = [
-    { title: "For Buyers", links: [{ label: "Browse Deals", href: "/deals" }, { label: "Browse Suppliers", href: "/suppliers" }, { label: "All Categories", href: "/categories" }, { label: "Pricing", href: "/pricing" }, { label: "Buyer Benefits", href: "/benefits" }] },
-    { title: "For Sellers", links: [{ label: "Supplier Benefits", href: "/supplier-benefits" }, { label: "Get Listed", href: "/get-listed" }, { label: "Add a Deal", href: "/add-deal" }, { label: "Seller FAQ", href: "/seller-faq" }] },
-    { title: "Company", links: [{ label: "About Us", href: "/about" }, { label: "Testimonials", href: "/testimonials" }, { label: "Affiliate Program", href: "/affiliate" }, { label: "Contact Us", href: "/contact" }, { label: "Blog", href: "/blog" }] },
-    { title: "Support", links: [{ label: "Help Center", href: "/help" }, { label: "A-Z Index", href: "/a-z" }, { label: "Custom Sourcing", href: "/sourcing" }, { label: "Privacy Policy", href: "/privacy" }, { label: "Terms of Service", href: "/terms" }] },
-  ];
+const EXIT_POPUP_TESTIMONIALS = [
+  { text: "Registered for free, found my first supplier within minutes. Already made back 5x.", author: "Sarah K.", label: "Online Reseller" },
+  { text: "Found 15 new verified suppliers for electronics within the first week. Game changer for my business.", author: "Tom B.", label: "Quality-Focused Buyer" },
+  { text: "The deal alerts saved me thousands on bulk stock. Worth every penny of membership.", author: "Robert W.", label: "Deal Hunter" },
+  { text: "Started wholesale reselling with zero knowledge. WholesaleUp's beginner guides made everything clear.", author: "Natasha S.", label: "New Reseller" },
+  { text: "Just bagged 1000 units of clothing at 40% below market price. Deals are genuinely incredible.", author: "Patricia H.", label: "Fashion Reseller" },
+  { text: "The supplier database is incredibly comprehensive. I've tripled my supplier network in just 2 months.", author: "Jessica W.", label: "Supply Chain Builder" },
+  { text: "Found dropship suppliers with 48-hour shipping times. Game changer for my Shopify store.", author: "Jonathan B.", label: "Shopify Store Owner" },
+  { text: "Liquidation section is where I find my biggest profit margins. Bulk overstock deals are incredible.", author: "Timothy P.", label: "Liquidation Buyer" },
+  { text: "Started my wholesale business here 6 months ago as a complete beginner. Now doing £2K weekly revenue.", author: "Hassan A.", label: "Wholesale Entrepreneur" },
+  { text: "The sourcing team helped me find a manufacturer for a completely custom product line. Incredible resource.", author: "Hannah P.", label: "Product Sourcer" },
+  { text: "Found my best FBA suppliers through WholesaleUp. Now my Amazon business generates £5K monthly profit.", author: "Edward S.", label: "Amazon FBA Seller" },
+  { text: "The profit calculator is essential for my daily operations. Saves me 30 minutes every day.", author: "Lucas B.", label: "Online Retailer" },
+  { text: "Premium membership gave me access to exclusive supplier deals. Revenue increased 35% in 3 months.", author: "Christopher B.", label: "Premium Member" },
+  { text: "Discovered incredible European suppliers I'd been missing. Supplier quality is top-notch.", author: "Carlos M.", label: "Quality-Focused Buyer" },
+  { text: "The step-by-step sourcing process helped me go from zero to selling on eBay in 2 weeks.", author: "Oliver M.", label: "eBay Seller" },
+  { text: "Been buying liquidation stock for Amazon FBA for 18 months. Margins consistently hit 40%+.", author: "Cassandra W.", label: "Amazon FBA Seller" },
+  { text: "My Etsy store now stocks products from 5 WholesaleUp dropshipping partners. Sales increased 200%.", author: "Natalie B.", label: "Etsy Seller" },
+  { text: "Flash sales section is brilliant. Got £8K of electronics stock for £4.2K. Incredible margins.", author: "Brian L.", label: "Flash Sale Hunter" },
+  { text: "The community forum is active and helpful. Real business owners sharing genuine advice.", author: "Mohammed I.", label: "Wholesale Reseller" },
+  { text: "Quality suppliers that actually respond to inquiries. No ghost profiles like other platforms.", author: "Michael O.", label: "Online Reseller" },
+];
+
+// Default discount — see ACTIVE_OFFER_DISCOUNT near top of file
+
+function SitewideExitPopup({ onAuthenticated, discount = ACTIVE_OFFER_DISCOUNT, isGuest = true }) {
+  const [show, setShow] = useState(false);
+  const [phase, setPhase] = useState("exit"); // "exit" | "register"
+  const dismissed = useRef(false);
+  const triggered = useRef(false);
+  const isGuestRef = useRef(isGuest);
+  useEffect(() => { isGuestRef.current = isGuest; }, [isGuest]);
+
+  // Exit-intent detection — mouseleave on documentElement only.
+  // This event fires exactly once when the cursor leaves the page boundary
+  // (e.g. moves to the address bar, tabs, or outside the browser).
+  // It does NOT fire on re-entry, child element transitions, or scrollbar interactions.
+  // We only trigger for upward exits (clientY <= 0) to avoid side/bottom edge triggers.
+  // Only fires for Guest users — logged-in users (Free, Standard, Premium, etc.) are excluded.
+  useEffect(() => {
+    if (typeof window === "undefined" || window.matchMedia("(pointer: coarse)").matches) return;
+
+    const fire = () => {
+      if (dismissed.current || triggered.current || !isGuestRef.current) return;
+      triggered.current = true;
+      setShow(true);
+    };
+
+    const onLeave = (e) => {
+      // Only trigger when cursor exits through the top edge (toward address bar/tabs)
+      if (e.clientY <= 0) fire();
+    };
+
+    const attachTimeout = setTimeout(() => {
+      document.documentElement.addEventListener("mouseleave", onLeave);
+    }, 5000);
+
+    return () => {
+      clearTimeout(attachTimeout);
+      document.documentElement.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
+  // Auto-dismiss if user is no longer a guest (e.g. switched demo role while popup was open)
+  useEffect(() => {
+    if (!isGuest && show) { setShow(false); dismissed.current = true; setPhase("exit"); document.body.style.overflow = ""; }
+  }, [isGuest, show]);
+
+  // Escape key + body scroll lock
+  useEffect(() => {
+    if (!show) return;
+    document.body.style.overflow = "hidden";
+    const handleKey = (e) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", handleKey);
+    return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", handleKey); };
+  }, [show]);
+
+  const close = () => { setShow(false); dismissed.current = true; setPhase("exit"); };
+
+  // Instant switch — no cross-fade delay. AuthModal is pre-rendered (hidden)
+  // so the switch is immediate with zero mount cost.
+  const registerRef = useRef(null);
+  const handleRegisterClick = () => {
+    setPhase("register");
+    // Focus the username input after display:none is removed
+    requestAnimationFrame(() => {
+      const input = registerRef.current?.querySelector("input");
+      if (input) input.focus();
+    });
+  };
+
+  // Handle successful authentication from the embedded AuthModal
+  const handleAuth = () => {
+    close();
+    if (onAuthenticated) onAuthenticated();
+  };
+
+  if (!show) return null;
+
+  const isRegisterPhase = phase === "register";
 
   return (
-    <footer className="bg-slate-900 text-slate-300">
-      {/* Newsletter subscription bar */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6">
-            {/* Left: heading */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <Mail size={20} className="text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-base">Get The Deals When They Matter</h3>
-                <p className="text-orange-100 text-sm">Subscribe for the latest wholesale deals &amp; offers</p>
-              </div>
-            </div>
+    <>
+      {/* Backdrop — persists throughout all phases */}
+      <div
+        className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm animate-[swExitFadeIn_0.3s_ease]"
+        onClick={close}
+      />
 
-            {/* Right: form */}
-            <div className="flex-1 w-full flex flex-col sm:flex-row items-stretch gap-2.5">
-              <div className="flex-1 min-w-0 relative">
-                <input
-                  type="email"
-                  placeholder="Your email address"
-                  className="w-full h-[42px] pl-[17rem] pr-4 text-sm rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-white/40"
-                />
-                <span className="absolute left-0 top-0 bottom-0 flex items-center px-4 bg-red-600 text-white text-xs font-bold rounded-l-lg whitespace-nowrap" style={{ fontFamily: "inherit" }}>
-                  25% discount code upon registration
-                </span>
-              </div>
-              <div className="w-full sm:w-52">
-                <NewsletterCategorySelect />
-              </div>
-              <button className="px-6 h-[42px] bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-lg transition-colors shrink-0">
-                Subscribe
-              </button>
-            </div>
+      {/* Modal container — stays on screen, content morphs inside */}
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-[swExitSlideUp_0.4s_cubic-bezier(0.16,1,0.3,1)]">
+        <div
+          className="relative w-full max-w-md lg:max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+
+          {/* ── Register Form — always mounted (hidden when exit phase), instant switch ── */}
+          <div ref={registerRef} style={{ display: isRegisterPhase ? "block" : "none" }}>
+            <AuthModal
+              embedded
+              initialTab="register"
+              onClose={close}
+              onAuthenticated={handleAuth}
+            />
           </div>
+
+          {/* ── Exit Content — visible only in exit phase ── */}
+          {!isRegisterPhase && (
+            <div className="flex flex-col lg:flex-row">
+
+              {/* Left marketing column — blue gradient matching AuthModal */}
+              <div className="hidden lg:flex lg:w-[42%] bg-gradient-to-br from-[#1a4b8c] via-[#1e5299] to-[#1a3f7a] items-center justify-center p-8 relative overflow-hidden">
+                {/* Dot world map background — same as AuthModal */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  <div className="absolute inset-0" style={{ mask: "radial-gradient(ellipse 80% 75% at 50% 50%, black 50%, transparent 90%)", WebkitMask: "radial-gradient(ellipse 80% 75% at 50% 50%, black 50%, transparent 90%)" }}>
+                    <DotWorldMap />
+                  </div>
+                </div>
+                {/* Subtle gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-400/8 via-transparent to-orange-500/5 pointer-events-none" />
+
+                <div className="relative text-center space-y-5">
+                  {/* Premium discount badge — animated, layered design */}
+                  <div className="relative mx-auto w-[120px] h-[120px]">
+                    {/* Outer glow pulse */}
+                    <div className="absolute inset-0 rounded-full bg-orange-400/20 animate-[swBadgePulse_2s_ease-in-out_infinite]" />
+                    {/* Decorative outer ring */}
+                    <div className="absolute inset-1 rounded-full border-2 border-dashed border-orange-300/40 animate-[swBadgeSpin_20s_linear_infinite]" />
+                    {/* Main badge */}
+                    <div className="absolute inset-2.5 rounded-full bg-gradient-to-br from-orange-500 via-amber-400 to-orange-500 shadow-xl shadow-orange-500/30 flex items-center justify-center overflow-hidden">
+                      {/* Shimmer sweep */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full animate-[swBadgeShimmer_3s_ease_infinite_1.5s]" />
+                      {/* Inner highlight ring */}
+                      <div className="absolute inset-[3px] rounded-full border border-white/30" />
+                      <div className="relative text-center">
+                        <span className="block text-3xl font-black text-white leading-none drop-shadow-sm" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>{discount}%</span>
+                        <span className="block text-[11px] font-extrabold text-white/90 uppercase tracking-[0.15em] mt-0.5">OFF</span>
+                      </div>
+                    </div>
+                    {/* Bottom ribbon */}
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 z-10">
+                      <div className="relative px-4 py-1 bg-gradient-to-r from-red-600 to-red-500 rounded-full shadow-lg shadow-red-500/30">
+                        <span className="text-[10px] font-bold text-white uppercase tracking-wider whitespace-nowrap">Upon Registration</span>
+                        {/* Ribbon notches */}
+                        <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-800 rounded-full opacity-60" />
+                        <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-800 rounded-full opacity-60" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <p className="text-lg font-extrabold text-white">Join for Free</p>
+                    <p className="text-sm text-sky-200 mt-2 leading-relaxed">
+                      901,900+ resellers already sourcing wholesale, liquidation &amp; dropship deals at up to 95% off
+                    </p>
+                  </div>
+
+                  {/* Trust indicators */}
+                  <div className="space-y-2.5 text-left">
+                    {[
+                      { icon: CheckCircle2, text: "No credit card required" },
+                      { icon: CheckCircle2, text: "Cancel or upgrade anytime" },
+                      { icon: CheckCircle2, text: "Instant access to deals research" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-2.5">
+                        <item.icon size={14} className="text-sky-300 shrink-0" />
+                        <span className="text-sm text-sky-100/80">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Testimonial carousel — auto-scrolling */}
+                  <ExitPopupTestimonialCarousel />
+                </div>
+              </div>
+
+              {/* Right content column */}
+              <div className="flex-1 lg:w-[58%] lg:shrink-0 flex flex-col overflow-y-auto">
+                {/* Close button */}
+                <button
+                  onClick={close}
+                  className="absolute top-4 right-4 z-10 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-all"
+                  aria-label="Close popup"
+                >
+                  <X size={16} />
+                </button>
+
+                <div className="p-6 sm:p-8 flex-1">
+                  {/* Mobile-only discount badge */}
+                  <div className="lg:hidden flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center shadow-md shadow-orange-500/20">
+                      <span className="text-xs font-black text-white">{discount}%</span>
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-orange-600 uppercase">{discount}% Discount code</span>
+                      <span className="text-xs text-slate-500 ml-1">upon registration</span>
+                    </div>
+                  </div>
+
+                  {/* Headline */}
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight animate-[swExitFadeSlideDown_0.4s_ease_0.1s_both]">
+                    Wait — Don&apos;t Leave Empty-Handed!
+                  </h2>
+                  <p className="text-base text-slate-500 mt-3 leading-relaxed animate-[swExitFadeSlideDown_0.4s_ease_0.15s_both]">
+                    Join our <span className="font-semibold text-slate-700">free newsletter</span> and keep a daily summary of the best deals from liquidations, surplus stock and production, bailiff auctions and much more.
+                  </p>
+
+                  {/* Value bullets */}
+                  <div className="mt-5 space-y-3 animate-[swExitFadeSlideDown_0.4s_ease_0.2s_both]">
+                    {[
+                      { icon: Zap, color: "text-orange-500 bg-orange-50", text: "14,891+ active wholesale deals updated daily" },
+                      { icon: Globe, color: "text-blue-500 bg-blue-50", text: "54,000+ verified suppliers across EU, UK & US" },
+                      { icon: TrendingUp, color: "text-emerald-500 bg-emerald-50", text: "Members average 366% markup on wholesale prices" },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg ${item.color} flex items-center justify-center shrink-0`}>
+                          <item.icon size={16} />
+                        </div>
+                        <span className="text-sm font-medium text-slate-700">{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Social proof */}
+                  <div className="mt-5 animate-[swExitFadeSlideDown_0.4s_ease_0.25s_both]">
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="flex -space-x-2 shrink-0">
+                        {["J", "M", "S", "R"].map((initial, i) => (
+                          <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white text-[10px] font-bold border-2 border-white">
+                            {initial}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-sm text-slate-600">
+                        <span className="font-bold text-slate-800">2,847 sellers</span> registered this month
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTA section — sticky at bottom */}
+                <div className="px-6 sm:px-8 pb-6 pt-2 border-t border-slate-100 bg-white animate-[swExitFadeSlideDown_0.4s_ease_0.3s_both]">
+                  <button
+                    onClick={handleRegisterClick}
+                    className="relative w-full py-3.5 sm:py-4 text-base font-extrabold text-white bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-600 hover:to-orange-500 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-200/50 hover:shadow-xl active:scale-[0.98] overflow-hidden"
+                  >
+                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[swExitShimmer_2.5s_ease_infinite_1s]" />
+                    <span className="relative flex items-center gap-2">
+                      Register Free Now
+                      <ArrowRight size={16} />
+                    </span>
+                  </button>
+                  <button
+                    onClick={close}
+                    className="w-full mt-2.5 py-2 text-xs font-medium text-slate-400 hover:text-slate-500 transition-colors text-center"
+                  >
+                    No thanks, I&apos;ll continue browsing
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Register form is pre-rendered above (hidden via display:none until phase=register) */}
         </div>
       </div>
 
-      {/* Main footer content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
-          <div className="col-span-2 md:col-span-1">
-            <div className="mb-4 flex items-center gap-3">
-              <WholesaleUpLogo />
-              <FooterCountrySelector />
-            </div>
-            <p className="text-sm text-slate-400 mb-4 leading-relaxed">The #1 wholesale and dropship platform. 20+ years connecting buyers with verified suppliers worldwide.</p>
-            <a href="mailto:service@wholesaleup.com" className="text-sm text-orange-400 hover:text-orange-300 transition-colors">service@wholesaleup.com</a>
-          </div>
-          {footerLinks.map((section) => (
-            <div key={section.title}>
-              <h4 className="text-white font-semibold text-sm mb-3.5">{section.title}</h4>
-              <ul className="space-y-2.5">
-                {section.links.map((link) => (
-                  <li key={link.label}><a href={link.href} className="text-sm text-slate-400 hover:text-orange-400 transition-colors">{link.label}</a></li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Payment methods */}
-      <div className="px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          {/* PayPal */}
-          <div className="h-8 px-2.5 rounded bg-white flex items-center justify-center" title="PayPal">
-            <span style={{fontSize: 13, fontWeight: 700, fontFamily: "Arial, sans-serif", color: "#003087"}}>Pay</span>
-            <span style={{fontSize: 13, fontWeight: 700, fontFamily: "Arial, sans-serif", color: "#009CDE"}}>Pal</span>
-          </div>
-          {/* Visa */}
-          <div className="h-8 px-2.5 rounded bg-white flex items-center justify-center" title="Visa">
-            <span style={{fontSize: 15, fontWeight: 700, fontStyle: "italic", color: "#1A1F71", fontFamily: "Arial, sans-serif"}}>VISA</span>
-          </div>
-          {/* Mastercard */}
-          <div className="h-8 px-2 rounded bg-white flex items-center justify-center" title="Mastercard">
-            <div className="relative" style={{width: 26, height: 16}}>
-              <div className="absolute rounded-full" style={{width: 16, height: 16, left: 0, top: 0, backgroundColor: "#EB001B"}} />
-              <div className="absolute rounded-full" style={{width: 16, height: 16, right: 0, top: 0, backgroundColor: "#F79E1B", mixBlendMode: "multiply"}} />
-            </div>
-          </div>
-          {/* American Express */}
-          <div className="h-8 px-2.5 rounded flex items-center justify-center" style={{backgroundColor: "#006FCF"}} title="American Express">
-            <span style={{fontSize: 10, fontWeight: 700, color: "white", fontFamily: "Arial, sans-serif", letterSpacing: 0.5}}>AMEX</span>
-          </div>
-          {/* Apple Pay */}
-          <div className="h-8 px-2.5 rounded bg-black flex items-center justify-center gap-1" title="Apple Pay">
-            <svg width="10" height="12" viewBox="0 0 10 12" fill="none" style={{display: "block", marginBottom: 1}}>
-              <path d="M6.8 2c-.4.5-1.1.9-1.7.9-.1-.7.2-1.4.6-1.8C6.1.6 6.9.2 7.4.2c.1.7-.2 1.3-.6 1.8zm.6 1c-.9 0-1.8.5-2.2.5-.5 0-1.2-.5-2-.5C1.6 3 0 4.4 0 7c0 1.6.6 3.2 1.4 4.3.6.9 1.2 1.7 2.1 1.7.8 0 1.2-.6 2.2-.6 1 0 1.3.6 2.2.5.9 0 1.5-.8 2.1-1.7.4-.6.7-1.3.9-2C8.6 8.2 8.7 5.9 10 5c-.6-.8-1.5-1.2-2.4-1.2-.3 0-.7.1-1.2.2z" fill="white"/>
-            </svg>
-            <span style={{fontSize: 11, fontWeight: 600, color: "white", fontFamily: "Arial, sans-serif"}}>Pay</span>
-          </div>
-          {/* Google Pay */}
-          <div className="h-8 px-2.5 rounded bg-white border border-slate-200 flex items-center justify-center gap-0.5" title="Google Pay">
-            <span style={{fontSize: 11, fontWeight: 700, color: "#4285F4", fontFamily: "Arial, sans-serif"}}>G</span>
-            <span style={{fontSize: 10, fontWeight: 500, color: "#5F6368", fontFamily: "Arial, sans-serif"}}>Pay</span>
-          </div>
-          {/* UnionPay */}
-          <div className="h-8 px-2.5 rounded flex items-center justify-center" style={{background: "linear-gradient(135deg, #D50032 0%, #01798A 50%, #003B72 100%)"}} title="UnionPay">
-            <span style={{fontSize: 9, fontWeight: 700, color: "white", fontFamily: "Arial, sans-serif", letterSpacing: 0.3}}>UnionPay</span>
-          </div>
-          {/* iDEAL */}
-          <div className="h-8 px-2.5 rounded bg-white flex items-center justify-center" title="iDEAL">
-            <span style={{fontSize: 10, fontWeight: 700, color: "#CC0066", fontFamily: "Arial, sans-serif"}}>iDEAL</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom bar */}
-      <div>
-        <div className="px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">&copy; 2004 - {new Date().getFullYear()} WholesaleUp. All rights reserved.</p>
-          <div className="flex items-center gap-5">
-            <a href="/privacy" className="text-xs text-slate-500 hover:text-slate-300">Privacy</a>
-            <a href="/terms" className="text-xs text-slate-500 hover:text-slate-300">Terms</a>
-            <a href="/cookies" className="text-xs text-slate-500 hover:text-slate-300">Cookies</a>
-          </div>
-        </div>
-      </div>
-    </footer>
+      <style>{`
+        @keyframes swExitFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes swExitSlideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes swExitFadeSlideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes swExitShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        @keyframes swTestimonialFade { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes swBadgePulse { 0%, 100% { transform: scale(1); opacity: 0.2; } 50% { transform: scale(1.08); opacity: 0.4; } }
+        @keyframes swBadgeSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes swBadgeShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+      `}</style>
+    </>
   );
 }
 
@@ -1316,58 +1708,157 @@ function Footer() {
    APP LAYOUT — Wraps all pages
    Sidebar (collapsible, sitewide) + Header + Content
    ═══════════════════════════════════════════════════ */
-export default function AppLayout({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
-  const [currency, setCurrency] = useState(CURRENCIES[0]);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+/* ── Standalone routes — render WITHOUT the AppLayout shell ──
+   These pages are self-contained landing pages with their own
+   header / footer baked into the phase component.  They skip
+   the Sidebar, Header, MobileNav, and Footer from AppLayout.
+   ─────────────────────────────────────────────────────────── */
+const STANDALONE_ROUTES = ["/pricing"];
 
-  // Listen for demo auth toggle from other components
+export default function AppLayout({ children }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Maintenance page renders standalone — no header, sidebar, footer, or exit-intent popup
+  if (pathname === "/maintenance") return <>{children}</>;
+
+  /* ── Auth state from NextAuth session (H9, C8) ────────────
+     useLayoutUser() wraps useSession() and derives user fields.
+     isAuthenticated / isPremium are computed from the JWT session —
+     no more demo-auth CustomEvents or localStorage persistence.
+     NextAuth handles Remember Me via extended JWT maxAge (90 days).
+     ─────────────────────────────────────────────────────────── */
+  const { user: sessionUser, status: authStatus } = useLayoutUser();
+  const isAuthenticated = authStatus === "authenticated";
+  const isPremium = sessionUser.tier === "PREMIUM" || sessionUser.tier === "PRO";
+
+  const { setDemoRole, isLoggedIn: demoLoggedIn, isPremium: demoPremium, demoRole, demoCategory, setDemoCategory, demoSupplierPro, setDemoSupplierPro, demoDealStatus, setDemoDealStatus } = useDemoAuth();
+  // For the header demo dropdown highlights: use demo-aware values
+  const effectiveAuthenticated = demoRole ? demoLoggedIn : isAuthenticated;
+  const effectivePremium = demoRole ? demoPremium : isPremium;
+  // 🔧 PRODUCTION: Replace localStorage currency with user's preferred currency from account settings / session
+  const [currency, setCurrencyRaw] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("wup-header-currency");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const match = CURRENCIES.find((c) => c.code === parsed.code);
+          if (match) return match;
+        }
+      } catch (_e) { /* ignore */ }
+    }
+    return CURRENCIES[0];
+  });
+  const setCurrency = useCallback((c) => {
+    setCurrencyRaw(c);
+    try { localStorage.setItem("wup-header-currency", JSON.stringify({ code: c.code, symbol: c.symbol })); } catch (_e) { /* ignore */ }
+    window.dispatchEvent(new CustomEvent("wup-currency-change", { detail: { code: c.code, symbol: c.symbol } }));
+  }, []);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, toggleSidebar, setSidebarCollapsed] = usePanelCollapse("wup-sidebar-collapsed");
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState("login");
+  const [lastLoginToast, setLastLoginToast] = useState(null);
+
+  // Listen for last-login toast events (auth-modal dispatches this after signIn)
   useEffect(() => {
-    const handler = (e) => setIsAuthenticated(e.detail.loggedIn);
-    window.addEventListener("demo-auth", handler);
-    return () => window.removeEventListener("demo-auth", handler);
+    const handler = (e) => setLastLoginToast(e.detail);
+    window.addEventListener("show-last-login", handler);
+    return () => window.removeEventListener("show-last-login", handler);
   }, []);
 
-  // Broadcast auth changes so child pages can stay in sync
-  const setGuest = () => { setIsAuthenticated(false); setIsPremium(false); window.dispatchEvent(new CustomEvent("demo-auth", { detail: { loggedIn: false, premium: false } })); };
-  const setFree = () => { setIsAuthenticated(true); setIsPremium(false); window.dispatchEvent(new CustomEvent("demo-auth", { detail: { loggedIn: true, premium: false } })); };
-  const setPremiumUser = () => { setIsAuthenticated(true); setIsPremium(true); window.dispatchEvent(new CustomEvent("demo-auth", { detail: { loggedIn: true, premium: true } })); };
+  // Listen for open-auth-modal events dispatched from child pages (e.g. guest CTA clicks)
+  useEffect(() => {
+    const handler = (e) => openAuth(e.detail?.tab || "register");
+    window.addEventListener("open-auth-modal", handler);
+    return () => window.removeEventListener("open-auth-modal", handler);
+  }, []);
+
+  /* ── Auth actions ──────────────────────────────────────────
+     openAuth()          — opens the auth modal on the given tab
+     handleAuthenticated — called by AuthModal after successful signIn;
+                           session refreshes automatically via useSession()
+     handleLogout        — calls NextAuth signOut() (C8)
+     ─────────────────────────────────────────────────────────── */
+  const openAuth = (tab = "login") => { setAuthModalTab(tab); setShowAuthModal(true); };
+  const handleAuthenticated = () => { setShowAuthModal(false); };
+  const handleLogout = useCallback(async () => {
+    // End NextAuth session — redirect: false so we control the UX
+    await signOut({ redirect: false });
+    // Clear demo tier override (if any was lingering)
+    if (demoRole) setDemoRole("guest");
+    // Navigate to homepage after session teardown
+    router.push("/");
+  }, [demoRole, setDemoRole, router]);
+
+  // Demo-only logout: just resets the demo role to "guest" (no real session to tear down)
+  const handleDemoLogout = useCallback(() => {
+    setDemoRole("guest");
+  }, [setDemoRole]);
+
+  /* ── Standalone mode: skip Sidebar / Header / Footer shell ── */
+  if (STANDALONE_ROUTES.includes(pathname)) {
+    return (
+      <div className="min-h-screen" style={{ fontFamily: "'DM Sans', 'Outfit', sans-serif" }}>
+        {children}
+        {/* Reuse the site-wide footer for visual consistency */}
+        <Footer />
+        {/* Auth Modal still available on standalone pages */}
+        {showAuthModal && (
+          <AuthModal
+            initialTab={authModalTab}
+            onClose={() => setShowAuthModal(false)}
+            onAuthenticated={handleAuthenticated}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex" style={{ fontFamily: "'DM Sans', 'Outfit', sans-serif" }}>
       {/* Sidebar */}
       <Sidebar
-        isAuthenticated={isAuthenticated}
-        user={MOCK_USER}
-        onLogin={() => setIsAuthenticated(true)}
+        isAuthenticated={effectiveAuthenticated}
+        user={demoRole && DEMO_USERS[demoRole] ? DEMO_USERS[demoRole] : sessionUser}
+        onLogin={() => openAuth("login")}
+        onLogout={demoRole ? handleDemoLogout : handleLogout}
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onToggle={toggleSidebar}
       />
-
-      {/* Expand button when collapsed */}
-      {sidebarCollapsed && <SidebarExpandButton onClick={() => setSidebarCollapsed(false)} />}
 
       {/* Right side: Header + Content + Footer */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header
-          isAuthenticated={isAuthenticated}
-          isPremium={isPremium}
-          user={MOCK_USER}
-          onLogin={() => setIsAuthenticated(true)}
-          onLogout={() => { setIsAuthenticated(false); setIsPremium(false); }}
+          isAuthenticated={effectiveAuthenticated}
+          isPremium={effectivePremium}
+          user={sessionUser}
+          onLogin={() => openAuth("login")}
+          onRegister={() => openAuth("register")}
+          onLogout={handleLogout}
           currency={currency}
           setCurrency={setCurrency}
           onMobileNavToggle={() => setMobileNavOpen(true)}
-          onSetGuest={setGuest}
-          onSetFree={setFree}
-          onSetPremium={setPremiumUser}
+          /* PRODUCTION: onSetDemoRole is dev-only.
+             Remove or gate behind process.env.NODE_ENV check. */
+          onSetDemoRole={setDemoRole}
+          demoRole={demoRole}
+          demoCategory={demoCategory}
+          onSetDemoCategory={setDemoCategory}
+          demoSupplierPro={demoSupplierPro}
+          onSetDemoSupplierPro={setDemoSupplierPro}
+          demoDealStatus={demoDealStatus}
+          onSetDemoDealStatus={setDemoDealStatus}
+          sidebarCollapsed={sidebarCollapsed}
         />
 
         <MobileNav open={mobileNavOpen} onClose={() => setMobileNavOpen(false)}
-          isAuthenticated={isAuthenticated} isPremium={isPremium} onLogin={() => setIsAuthenticated(true)}
-          onSetGuest={setGuest} onSetFree={setFree} onSetPremium={setPremiumUser} />
+          isAuthenticated={effectiveAuthenticated} isPremium={effectivePremium} onLogin={() => openAuth("login")} onRegister={() => openAuth("register")}
+          onSetDemoRole={setDemoRole} demoRole={demoRole}
+          demoCategory={demoCategory} onSetDemoCategory={setDemoCategory}
+          demoSupplierPro={demoSupplierPro} onSetDemoSupplierPro={setDemoSupplierPro}
+          demoDealStatus={demoDealStatus} onSetDemoDealStatus={setDemoDealStatus} />
 
         <main className="flex-1">
           {children}
@@ -1376,6 +1867,27 @@ export default function AppLayout({ children }) {
         <Footer />
       </div>
 
+      {/* Auth Modal — onAuthenticated triggers useSession() refresh automatically */}
+      {showAuthModal && (
+        <AuthModal
+          initialTab={authModalTab}
+          onClose={() => setShowAuthModal(false)}
+          onAuthenticated={handleAuthenticated}
+        />
+      )}
+      {lastLoginToast && (
+        <LastLoginToast lastLogin={lastLoginToast} onDismiss={() => setLastLoginToast(null)} />
+      )}
+
+      {/* Sitewide exit-intent popup — Guest users only, excluded from /pricing & dashboard pages.
+         isGuest is passed as a defence-in-depth prop so the popup's internal fire()
+         also checks auth state (guards against hydration race conditions). */}
+      {!effectiveAuthenticated && pathname !== "/pricing" && !pathname.startsWith("/dashboard") && !pathname.startsWith("/account-") && (
+        <SitewideExitPopup onAuthenticated={handleAuthenticated} isGuest={!effectiveAuthenticated} />
+      )}
+
+      {/* GDPR cookie consent banner — site-wide, bottom-anchored */}
+      <CookieConsent />
     </div>
   );
 }

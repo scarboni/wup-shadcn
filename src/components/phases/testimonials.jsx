@@ -7,7 +7,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
-  ArrowRight,
   Users,
   ThumbsUp,
   Globe,
@@ -17,10 +16,16 @@ import {
   MapPin,
 } from "lucide-react";
 import { ALL_TESTIMONIALS } from "@/data/testimonials-data";
+import StarRating from "@/components/shared/star-rating";
+import CtaBanner from "@/components/shared/cta-banner";
 
-/* ═══════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════
    CONSTANTS
-   ═══════════════════════════════════════ */
+   PRODUCTION (H2): Fetch live stats from GET /api/stats
+   Testimonials data imported from /data/testimonials-data.
+   When DB is connected: GET /api/testimonials?limit=50&category=...
+   SEED: prisma/seed.ts → seedTestimonials(), seedPlatformStats()
+   ═══════════════════════════════════════════════════════════ */
 const CATEGORIES = ["All", "Deals", "Suppliers", "Service", "Sourcing", "Support", "Beginners", "Tools", "Dropshipping", "Liquidation", "Amazon", "eBay"];
 
 const STATS = [
@@ -34,15 +39,7 @@ const STATS = [
    COMPONENTS
    ═══════════════════════════════════════ */
 
-function StarRating({ rating }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star key={s} size={14} className={s <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
-      ))}
-    </div>
-  );
-}
+/* StarRating — imported from @/components/shared/star-rating */
 
 function TestimonialCard({ testimonial, featured = false }) {
   const initials = testimonial.author.split(" ").map((n) => n[0]).join("");
@@ -61,7 +58,7 @@ function TestimonialCard({ testimonial, featured = false }) {
         </div>
 
         {/* Rating */}
-        <StarRating rating={testimonial.rating} />
+        <StarRating rating={testimonial.rating} size={14} />
 
         {/* Text */}
         <p className="text-sm text-slate-600 leading-relaxed mt-3 mb-5">
@@ -77,10 +74,7 @@ function TestimonialCard({ testimonial, featured = false }) {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-900 truncate">{testimonial.author}</p>
-            <div className="flex items-center gap-1 text-xs text-slate-400">
-              <MapPin size={10} />
-              <span>{testimonial.location}</span>
-            </div>
+            <p className="text-xs text-slate-400 truncate">{testimonial.role ? `${testimonial.role} — ${testimonial.location}` : testimonial.location}</p>
           </div>
           {testimonial.category && (
             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
@@ -100,6 +94,7 @@ export default function TestimonialsPage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [goToPage, setGoToPage] = useState("");
   const perPage = 24;
 
   const filtered = useMemo(() => {
@@ -124,15 +119,12 @@ export default function TestimonialsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ── Hero ── */}
+      {/* ── Hero — exact register blue + greyscale photo appliqué ── */}
       <section className="relative overflow-hidden">
-        {/* Background image */}
-        <div className="absolute inset-0" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80')", backgroundSize: "cover", backgroundPosition: "center 30%" }} />
-        <div className="absolute inset-0 bg-slate-900/80" />
-        <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
-        </div>
+        {/* Layer 1: Solid blue gradient — identical to /register MarketingColumn, NO opacity */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1a4b8c] via-[#1e5299] to-[#1a3f7a]" />
+        {/* Layer 2: Greyscale photo blended as subtle texture */}
+        <div className="absolute inset-0 opacity-15" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1920&q=80')", backgroundSize: "cover", backgroundPosition: "center 30%", filter: "grayscale(1)", mixBlendMode: "luminosity" }} />
         <div className="relative px-4 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-white/60 pt-4">
@@ -159,7 +151,7 @@ export default function TestimonialsPage() {
                 <div key={stat.label} className="text-center">
                   <stat.icon size={20} className={`${stat.color} mx-auto mb-1.5`} />
                   <p className="text-xl font-extrabold text-white">{stat.value}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{stat.label}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -201,7 +193,7 @@ export default function TestimonialsPage() {
                 placeholder="Search reviews..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
-                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-100 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-300 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
               />
             </div>
           </div>
@@ -230,9 +222,6 @@ export default function TestimonialsPage() {
             {activeCategory === "All" && !searchQuery ? "All Reviews" : `${filtered.length} Review${filtered.length !== 1 ? "s" : ""}`}
             {searchQuery && <span className="text-slate-400 font-normal"> for &ldquo;{searchQuery}&rdquo;</span>}
           </h2>
-          <span className="text-xs text-slate-400">
-            Page {page} of {totalPages} ({filtered.length} reviews)
-          </span>
         </div>
 
         {filtered.length === 0 ? (
@@ -249,47 +238,79 @@ export default function TestimonialsPage() {
               ))}
             </div>
 
-            {/* Pagination */}
+            {/* Pagination — matches /deals layout */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-10">
-                <button
-                  onClick={() => { setPage((p) => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  disabled={page === 1}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-                  .reduce((acc, p, idx, arr) => {
-                    if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((p, idx) =>
-                    p === "..." ? (
-                      <span key={`dots-${idx}`} className="px-1 text-slate-400 text-sm">...</span>
-                    ) : (
+              <div className="flex items-center justify-between flex-wrap gap-3 py-5 border-t border-slate-100 mt-8">
+                {/* Left: Total count */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-slate-500">
+                    Total reviews: <strong className="text-slate-700">{filtered.length.toLocaleString()}</strong>
+                  </span>
+                </div>
+
+                {/* Right: Page Navigation */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => { setPage(Math.max(1, page - 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    disabled={page === 1}
+                    className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {/* Page Numbers — sliding window of 5 */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    return (
                       <button
-                        key={p}
-                        onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold transition-colors ${
-                          page === p
+                        key={pageNum}
+                        onClick={() => { setPage(pageNum); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                        className={`w-9 h-9 rounded-lg text-sm font-semibold transition-all ${
+                          page === pageNum
                             ? "bg-orange-500 text-white shadow-sm"
-                            : "border border-slate-200 text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
+                            : "bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600 hover:shadow-sm"
                         }`}
                       >
-                        {p}
+                        {pageNum}
                       </button>
-                    )
-                  )}
-                <button
-                  onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                  disabled={page === totalPages}
-                  className="w-9 h-9 rounded-lg flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                >
-                  <ChevronRightIcon size={16} />
-                </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => { setPage(Math.min(totalPages, page + 1)); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                    disabled={page === totalPages}
+                    className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
+                  >
+                    <ChevronRightIcon size={16} />
+                  </button>
+
+                  {/* Go To */}
+                  <div className="flex items-center gap-1.5 ml-3">
+                    <span className="text-sm text-slate-400">Go to</span>
+                    <input
+                      type="number"
+                      value={goToPage}
+                      onChange={(e) => setGoToPage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const p = parseInt(goToPage);
+                          if (p >= 1 && p <= totalPages) { setPage(p); setGoToPage(""); window.scrollTo({ top: 0, behavior: "smooth" }); }
+                        }
+                      }}
+                      placeholder="Page"
+                      className="w-20 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-center tabular-nums focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </>
@@ -298,31 +319,7 @@ export default function TestimonialsPage() {
 
       {/* ── CTA ── */}
       <section className="px-4 sm:px-6 lg:px-8 pb-12">
-        <div className="relative bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl overflow-hidden p-8 sm:p-12 text-center">
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "30px 30px" }} />
-          <div className="relative">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
-              Ready to Join Them?
-            </h2>
-            <p className="text-sm sm:text-base text-white/90 max-w-xl mx-auto mb-6">
-              Start finding profitable deals and verified suppliers today. Join hundreds of thousands of successful resellers.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a
-                href="/pricing"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-colors shadow-lg"
-              >
-                Get Started Free <ArrowRight size={16} />
-              </a>
-              <a
-                href="/deals"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/20 text-white font-semibold rounded-xl hover:bg-white/30 transition-colors"
-              >
-                Browse Deals
-              </a>
-            </div>
-          </div>
-        </div>
+        <CtaBanner className="" />
       </section>
     </div>
   );

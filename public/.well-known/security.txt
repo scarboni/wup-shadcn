@@ -1,0 +1,8 @@
+# WholesaleUp Security Contact
+# L6: security.txt per RFC 9116
+# https://securitytxt.org/
+
+Contact: mailto:security@wholesaleup.com
+Preferred-Languages: en
+Canonical: https://wholesaleup.com/.well-known/security.txt
+Expires: 2027-03-04T00:00:00.000Z

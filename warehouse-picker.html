@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warehouse Hero Image Picker — Round 3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #0f172a; padding: 20px; color: #e2e8f0; }
+  h1 { text-align: center; margin-bottom: 6px; }
+  p.sub { text-align: center; color: #94a3b8; margin-bottom: 24px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+  @media(min-width:800px){ .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: #1e293b; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
+  .card-label { padding: 10px 14px; font-weight: 600; color: #e2e8f0; font-size: 13px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .tag-liked { background: #22c55e; color: #fff; }
+  .tag-current { background: #3b82f6; color: #fff; }
+  .tag-new { background: #f59e0b; color: #000; }
+  .hero-preview { position: relative; height: 260px; overflow: hidden; cursor: pointer; }
+  .hero-preview img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
+  .hero-preview:hover img { transform: scale(1.05); }
+  .card.span2 { grid-column: 1 / -1; }
+  .card.span2 .hero-preview { height: 340px; }
+  .id { font-family: monospace; color: #64748b; font-size: 11px; }
+</style>
+</head>
+<body>
+<h1>Warehouse Hero — Round 3</h1>
+<p class="sub">Your 2 liked images (A & B) + the current pick (C) + 9 new options. Click to zoom.</p>
+
+<div class="grid">
+
+  <!-- A: Original -->
+  <div class="card">
+    <div class="card-label">A — Original hero <span class="tag tag-liked">LIKED</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://wholesaledeals.vercel.app/assets/images/v3/homepage/bg-hero.webp" alt="Original">
+    </div>
+  </div>
+
+  <!-- B: 4483773 -->
+  <div class="card">
+    <div class="card-label">B — Metal shelves stock <span class="tag tag-liked">LIKED</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/4483773/pexels-photo-4483773.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="4483773">
+    </div>
+  </div>
+
+  <!-- C: 4483610 (currently in code) -->
+  <div class="card">
+    <div class="card-label">C — Wide concrete floor <span class="tag tag-current">CURRENT</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/4483610/pexels-photo-4483610.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="4483610">
+    </div>
+  </div>
+
+  <!-- NEW 1: 28846853 — Wholesale Warehouse Aisle -->
+  <div class="card">
+    <div class="card-label">1 — Wholesale warehouse aisle <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/28846853/pexels-photo-28846853.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="28846853" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 2: 29454379 — Expansive Warehouse Aisle -->
+  <div class="card">
+    <div class="card-label">2 — Expansive aisle with products <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/29454379/pexels-photo-29454379.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="29454379" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 3: 4483775 — Man Walking in Warehouse -->
+  <div class="card">
+    <div class="card-label">3 — Deep aisle perspective <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/4483775/pexels-photo-4483775.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="4483775" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 4: 5156696 — Boxes on Shelves (Maor Attias) -->
+  <div class="card">
+    <div class="card-label">4 — Boxes on shelves, bright <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/5156696/pexels-photo-5156696.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="5156696" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 5: 10834810 — Stacked boxes, blue ceiling -->
+  <div class="card">
+    <div class="card-label">5 — Stacked boxes, blue ceiling <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/10834810/pexels-photo-10834810.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="10834810" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 6: 4483862 — Workers in Warehouse -->
+  <div class="card">
+    <div class="card-label">6 — Workers among tall shelves <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/4483862/pexels-photo-4483862.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="4483862" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 7: 4487363 — Wares in foils on pallets -->
+  <div class="card">
+    <div class="card-label">7 — Foil-wrapped pallets <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/4487363/pexels-photo-4487363.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="4487363" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 8: 10697106 — Interior of Warehouse (On Shot) -->
+  <div class="card">
+    <div class="card-label">8 — Industrial interior, wide <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/10697106/pexels-photo-10697106.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="10697106" loading="lazy">
+    </div>
+  </div>
+
+  <!-- NEW 9: 31043129 — Warehouse Workers Handling Logistics Boxes -->
+  <div class="card">
+    <div class="card-label">9 — Logistics workers & boxes <span class="tag tag-new">NEW</span></div>
+    <div class="hero-preview" onclick="window.open(this.querySelector('img').src)">
+      <img src="https://images.pexels.com/photos/31043129/pexels-photo-31043129.jpeg?auto=compress&cs=tinysrgb&w=1920" alt="31043129" loading="lazy">
+    </div>
+  </div>
+
+</div>
+
+<p style="text-align:center;color:#64748b;margin-top:24px;font-size:12px">All free (Pexels license). Tell me the letter or number!</p>
+</body>
+</html>

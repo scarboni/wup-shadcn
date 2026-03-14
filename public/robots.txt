@@ -1,0 +1,12 @@
+# WholesaleUp — robots.txt
+# L1: SEO crawlability configuration
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /shell
+Disallow: /gating
+
+# Sitemap
+Sitemap: https://wholesaleup.com/sitemap.xml

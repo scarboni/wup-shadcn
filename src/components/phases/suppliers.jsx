@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { usePanelCollapse } from "@/components/shared/use-panel-collapse";
+import { useDemoAuth } from "@/components/shared/demo-auth-context";
+import WebsiteLink from "@/components/shared/website-link";
 import {
   Tag,
   Star,
@@ -11,6 +15,9 @@ import {
   Clock,
   ChevronRight,
   Lock,
+  Rocket,
+  User,
+  CheckCircle2,
   BadgeCheck,
   ExternalLink,
   Send,
@@ -21,6 +28,7 @@ import {
   Package,
   Heart,
   Sparkles,
+  Crown,
   Copy,
   Check,
   LayoutGrid,
@@ -36,6 +44,16 @@ import {
   ShoppingCart,
   Store,
 } from "lucide-react";
+import CtaBanner from "@/components/shared/cta-banner";
+import VerifiedBadge from "@/components/shared/verified-badge";
+import StarRating from "@/components/shared/star-rating";
+import ContactSupplierModal from "@/components/shared/contact-modal";
+import Breadcrumb from "@/components/shared/breadcrumb";
+import { FILTER_CATEGORIES, getCategoryById, getSubcategoryById } from "@/lib/categories";
+import { COUNTRIES as CANONICAL_COUNTRIES } from "@/lib/countries";
+import BroadMatchSeparator from "@/components/shared/broad-match-separator";
+import { CollapsibleFilterPanel } from "@/components/shared/collapsible-filter-panel";
+import { LockedLogoPlaceholder } from "@/components/shared/logo";
 
 import { FilterSidebar, ActiveFilterChips, Pagination } from "./filters";
 
@@ -47,32 +65,33 @@ function FlagImg({ code, size = 20 }) {
   return <img src={`https://flagcdn.com/w40/${iso}.png`} alt={code} className="inline-block rounded-sm object-cover" style={{ width: size, height: size * 0.7 }} />;
 }
 
-/* ─────────── Star Rating ─────────── */
-function StarRating({ rating, size = 12, showValue = false }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          size={size}
-          className={
-            i <= Math.floor(rating)
-              ? "fill-amber-400 text-amber-400"
-              : i - 0.5 <= rating
-              ? "fill-amber-400/50 text-amber-400"
-              : "text-slate-200 fill-slate-200"
-          }
-        />
-      ))}
-      {showValue && <span className="text-xs font-semibold text-slate-600 ml-1">{rating.toFixed(1)}</span>}
-    </div>
-  );
+/* ─────────── Business Hours Helpers ─────────── */
+const DAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+function getOpenDays(businessHours) {
+  if (!businessHours) return [false, false, false, false, false, false, false];
+  return DAY_KEYS.map(day => businessHours[day]?.status === "open");
+}
+
+function getOpeningHours(businessHours) {
+  if (!businessHours) return "";
+  // Find first open day and return its slot times
+  for (const day of DAY_KEYS) {
+    const d = businessHours[day];
+    if (d?.status === "open" && d.slots?.[0]) {
+      return `${d.slots[0].open}–${d.slots[0].close}`;
+    }
+  }
+  return "";
 }
 
 /* ─────────── Highlight Keywords in Text ─────────── */
 function HighlightedText({ text, keyword }) {
   if (!keyword || !text) return text;
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // keyword can be pipe-separated for multiple terms (e.g. "Nike|Adidas")
+  const terms = keyword.split("|").filter(Boolean);
+  if (terms.length === 0) return text;
+  const escaped = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
   const regex = new RegExp(`(${escaped})`, "gi");
   const parts = text.split(regex);
   if (parts.length === 1) return text;
@@ -101,87 +120,6 @@ function BlurredText({ text, isPremium, className = "" }) {
 }
 
 /* ═══════════════════════════════════════════════════
-   CONTACT SUPPLIER MODAL
-   ═══════════════════════════════════════════════════ */
-function ContactSupplierModal({ supplier, onClose }) {
-  const [form, setForm] = useState({ subject: "", message: "" });
-  const [sent, setSent] = useState(false);
-
-  const handleSend = () => {
-    setSent(true);
-    setTimeout(() => onClose(), 2000);
-  };
-
-  if (!supplier) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-bold text-sm">Contact Supplier</h3>
-              <p className="text-blue-100 text-xs mt-0.5">{supplier.name}</p>
-            </div>
-            <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-        {/* Body */}
-        <div className="p-6">
-          {sent ? (
-            <div className="text-center py-6">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-3">
-                <BadgeCheck size={24} className="text-emerald-500" />
-              </div>
-              <p className="font-bold text-slate-900">Message Sent!</p>
-              <p className="text-sm text-slate-500 mt-1">The supplier will respond to your enquiry shortly.</p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Subject</label>
-                <input
-                  type="text"
-                  value={form.subject}
-                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                  placeholder="e.g. Enquiry about bulk pricing"
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300"
-                />
-              </div>
-              <div className="mb-5">
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Message</label>
-                <textarea
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  placeholder="Write your message to the supplier..."
-                  rows={5}
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 resize-none"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={onClose} className="flex-1 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSend}
-                  disabled={!form.subject.trim() || !form.message.trim()}
-                  className="flex-1 py-2.5 text-xs font-bold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                >
-                  <Mail size={12} /> Send Message
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
    REPORT INVALID DETAILS MODAL
    ═══════════════════════════════════════════════════ */
 function ReportInvalidModal({ supplier, field, onClose }) {
@@ -197,15 +135,15 @@ function ReportInvalidModal({ supplier, field, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label="Report Invalid Details" className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-white font-bold text-sm">Report Invalid Details</h3>
-              <p className="text-red-100 text-xs mt-0.5">{supplier.name}</p>
+              <p className="text-red-100 text-xs mt-0.5">{supplier.companyName || "Supplier"}</p>
             </div>
-            <button onClick={onClose} className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors">
+            <button onClick={onClose} className="min-w-[44px] min-h-[44px] rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors" aria-label="Close modal">
               <X size={14} />
             </button>
           </div>
@@ -226,7 +164,7 @@ function ReportInvalidModal({ supplier, field, onClose }) {
                 <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-slate-700">Reporting: <span className="text-red-600">{field}</span></p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">You are reporting that this supplier's {field.toLowerCase()} details may be incorrect or outdated.</p>
+                  <p className="text-xs text-slate-500 mt-0.5">You are reporting that this supplier's {field.toLowerCase()} details may be incorrect or outdated.</p>
                 </div>
               </div>
               <div className="mb-5">
@@ -236,16 +174,16 @@ function ReportInvalidModal({ supplier, field, onClose }) {
                   onChange={(e) => setComments(e.target.value)}
                   placeholder="Tell us what's wrong with this information..."
                   rows={4}
-                  className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-300 resize-none"
+                  className="w-full px-3 py-2.5 text-base border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-300 resize-none"
                 />
               </div>
               <div className="flex gap-3">
-                <button onClick={onClose} className="flex-1 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <button onClick={onClose} className="flex-1 py-2.5 text-sm font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 py-2.5 text-xs font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5"
                 >
                   <AlertTriangle size={12} /> Submit Report
                 </button>
@@ -258,307 +196,769 @@ function ReportInvalidModal({ supplier, field, onClose }) {
   );
 }
 
-/* ─────────── Mock Supplier Data ─────────── */
+/* ─────────── Placeholder Supplier Data (H1) ────────────────
+   PRODUCTION: Replace with data from API:
+   - SUPPLIERS       → GET /api/suppliers?limit=20&offset=0&filters=...
+   - REVIEWS         → included in supplier response or GET /api/suppliers/[id]/reviews
+   - categories list → GET /api/categories (for filter sidebar)
+   SEED: prisma/seed.ts → seedSuppliers(), seedCategories(),
+         seedTestimonials(), seedPlatformStats()
+   Use SWR/React Query with server-side pagination.
+   ─────────────────────────────────────────────────────────── */
 const SUPPLIERS = [
   {
     id: 1,
-    name: "Trainers and Sportswear Supplier",
-    country: "UK",
-    countryName: "United Kingdom",
+    slug: "prokit-sports-ltd",
+    companyName: "ProKit Sports Ltd",
     rating: 5.0,
     reviewCount: 24,
     yearsActive: 8,
-    verified: true,
-    description: "We are a wholesaler of sportswear clothing and shoes. We offer high quality of adidas originals men's sports jackets, adidas long sleeved formal button collared mens shirts, canterbury tour and waimak polo shirts, adidas andy murray t-shirts. We also stock a wide range of trainers including adidas superstar, nike air max, nike free run, reebok classics and many more popular brands at competitive wholesale prices. Our warehouse in East London carries over 10,000 SKUs across all major sportswear categories with new stock arriving weekly from brand-authorised sources. We supply independent retailers, market traders, and online sellers across the UK and Europe with minimum order quantities starting from just 10 units. All items come with full manufacturer warranty and authenticity guarantee. We also offer a bespoke embroidery and printing service for team kits and corporate workwear orders.",
-    phone: "+4402089072658",
-    email: "wholesaletrain@gmail.com",
-    address: "9 Fisher's Lane, Chiswick London United Kingdom",
-    zip: "W41RX",
-    city: "London",
-    website: "www.sportswearwholesale.co.uk",
-    contactName: "Jane Collin",
-    contactPosition: "Store Manager",
+    isVerified: true,
+    companyDescription: "We are a wholesaler of sportswear clothing and shoes. We offer high quality of adidas originals men's sports jackets, adidas long sleeved formal button collared mens shirts, canterbury tour and waimak polo shirts, adidas andy murray t-shirts. We also stock a wide range of trainers including adidas superstar, nike air max, nike free run, reebok classics and many more popular brands at competitive wholesale prices. Our warehouse in East London carries over 10,000 SKUs across all major sportswear categories with new stock arriving weekly from brand-authorised sources. We supply independent retailers, market traders, and online sellers across the UK and Europe with minimum order quantities starting from just 10 units. All items come with full manufacturer warranty and authenticity guarantee. We also offer a bespoke embroidery and printing service for team kits and corporate workwear orders.",
+    contact: {
+      name: "Jane Collin",
+      roleInCompany: "Store Manager",
+      mobileNumber: "+4402089072658",
+      businessEmail: "wholesaletrain@gmail.com",
+    },
+    address: {
+      street: "9 Fisher's Lane, Chiswick",
+      city: "London",
+      postalCode: "W41RX",
+      country: "United Kingdom",
+      countryCode: "gb",
+    },
+    companyWebsite: "www.sportswearwholesale.co.uk",
     categories: ["Computer & Software Lots", "Electrical & Lighting Lots", "Telephony & Mobile Phones Lots", "Sports & Leisure", "Apparel & Clothing"],
-    products: "Premium Clothings, Premium Footwears, Premium Accessories, Premium Watches",
-    brands: ["Adidas", "Nike", "Reebok", "Canterbury"],
-    openingHours: "08:00-16:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "Dropshipping", "B2B"],
+    productsOffered: "Premium Clothings, Premium Footwears, Premium Accessories, Premium Watches",
+    brandsDistributed: ["Adidas", "Nike", "Reebok", "Canterbury"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      tuesday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      wednesday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      thursday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      friday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "dropshipping", "white-label"],
+    supplierType: ["wholesaler", "distributor"],
+    productQualityTier: ["mid-range", "premium"],
+    isSupplierPro: true,
+    companyLogo: "https://ui-avatars.com/api/?name=PK&background=1e5299&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "market-trader", "wholesaler-reseller"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: ["ce", "iso-9001"],
+    catalogueSize: "1000-5000",
+    minimumOrderAmount: 10,
+    minimumOrderCurrency: "GBP",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit"],
+    deliveryMethods: ["national-post", "own-fleet"],
+    leadTime: "1-2-days",
+    countriesServed: ["GB", "DE", "FR", "NL"],
+    facilitySize: 5000,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2018,
+    preferredCurrency: "GBP",
+    sampleAvailability: "free",
+    salutation: "Ms",
   },
   {
     id: 2,
-    name: "Basketball Sport Supplier",
-    country: "DE",
-    countryName: "Germany",
+    slug: "basketball-sport-gmbh",
+    companyName: "Basketball Sport GmbH",
     rating: 4.5,
     reviewCount: 18,
     yearsActive: 5,
-    verified: true,
-    description: "Premium basketball equipment and sportswear distributor covering Europe. We specialise in authentic NBA merchandise, professional-grade basketballs, training equipment, and team uniforms. Our warehouse stocks over 5,000 SKUs from leading brands with same-day dispatch on orders placed before 2pm CET.",
-    phone: "+49301234567",
-    email: "info@basketballsport.de",
-    address: "Berliner Str. 45, Berlin Germany",
-    zip: "10115",
-    city: "Berlin",
-    website: "www.basketballsport.de",
-    contactName: "Hans Mueller",
-    contactPosition: "Sales Director",
+    isVerified: true,
+    companyDescription: "Premium basketball equipment and sportswear distributor covering Europe. We specialise in authentic NBA merchandise, professional-grade basketballs, training equipment, and team uniforms. Our warehouse stocks over 5,000 SKUs from leading brands with same-day dispatch on orders placed before 2pm CET.",
+    contact: {
+      name: "Hans Mueller",
+      roleInCompany: "Sales Director",
+      mobileNumber: "+49301234567",
+      businessEmail: "info@basketballsport.de",
+    },
+    address: {
+      street: "Berliner Str. 45",
+      city: "Berlin",
+      postalCode: "10115",
+      country: "Germany",
+      countryCode: "de",
+    },
+    companyWebsite: "www.basketballsport.de",
     categories: ["Sports & Leisure", "Apparel & Clothing", "Toys & Games"],
-    products: "Basketball Equipment, Sports Apparel, Training Gear",
-    brands: ["Nike", "Under Armour", "Spalding", "Wilson"],
-    openingHours: "09:00-17:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "B2B"],
+    productsOffered: "Basketball Equipment, Sports Apparel, Training Gear",
+    brandsDistributed: ["Nike", "Under Armour", "Spalding", "Wilson"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      tuesday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      wednesday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      thursday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      friday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "job-lots"],
+    supplierType: ["distributor"],
+    productQualityTier: ["premium"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=BS&background=e74c3c&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "multi-chain", "online-retailer"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: ["ce"],
+    catalogueSize: "200-1000",
+    minimumOrderAmount: 50,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit"],
+    deliveryMethods: ["dhl", "ups", "own-fleet"],
+    leadTime: "1-2-days",
+    countriesServed: ["DE", "FR", "NL", "AT", "PL"],
+    facilitySize: 3000,
+    facilitySizeUnit: "m²",
+    companySize: "10-50",
+    yearEstablished: 2021,
+    preferredCurrency: "EUR",
+    sampleAvailability: "paid",
+    salutation: "Mr",
   },
   {
     id: 3,
-    name: "Casual & Everyday Clothing Wholesaler",
-    country: "UK",
-    countryName: "United Kingdom",
+    slug: "stylevault-trading-co",
+    companyName: "StyleVault Trading Co",
     rating: 4.2,
     reviewCount: 12,
     yearsActive: 6,
-    verified: true,
-    description: "We are a wholesaler of clothing and accessories. We offer a wide range of products, such as premium brand dresses, jackets, trousers, shirts, shoes, handbags, watches, and jewelry from consumer returns and end of line collections. Our goal is to provide retailers with high quality, affordable luxury fashion items that help them stand out in a competitive market. We source our stock from leading UK department stores, high-street chains, and online retailers, ensuring every batch is genuine branded merchandise. Our Manchester distribution centre processes over 50,000 units per week with full quality control inspection on every item. We offer flexible buying options including pre-sorted grade A pallets, mixed fashion pallets, and hand-picked premium bundles tailored to your store's customer profile.",
-    phone: "+4402039876543",
-    email: "sales@casualwholesale.co.uk",
-    address: "15 Victoria Road, Manchester United Kingdom",
-    zip: "M1 2AB",
-    city: "Manchester",
-    website: "www.casualwholesale.co.uk",
-    contactName: "Sarah Thompson",
-    contactPosition: "Operations Manager",
+    isVerified: true,
+    companyDescription: "We are a wholesaler of clothing and accessories. We offer a wide range of products, such as premium brand dresses, jackets, trousers, shirts, shoes, handbags, watches, and jewelry from consumer returns and end of line collections. Our goal is to provide retailers with high quality, affordable luxury fashion items that help them stand out in a competitive market. We source our stock from leading UK department stores, high-street chains, and online retailers, ensuring every batch is genuine branded merchandise. Our Manchester distribution centre processes over 50,000 units per week with full quality control inspection on every item. We offer flexible buying options including pre-sorted grade A pallets, mixed fashion pallets, and hand-picked premium bundles tailored to your store's customer profile.",
+    contact: {
+      name: "Sarah Thompson",
+      roleInCompany: "Operations Manager",
+      mobileNumber: "+4402039876543",
+      businessEmail: "sales@casualwholesale.co.uk",
+    },
+    address: {
+      street: "15 Victoria Road",
+      city: "Manchester",
+      postalCode: "M1 2AB",
+      country: "United Kingdom",
+      countryCode: "gb",
+    },
+    companyWebsite: "www.casualwholesale.co.uk",
     categories: ["Apparel & Clothing", "Jewellery & Watches", "Health & Beauty"],
-    products: "Premium Clothings, Premium Footwears, Premium Accessories, Premium Watches, Premium Jewelries, Premium Handbags",
-    brands: [],
-    openingHours: "08:00-16:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "Liquidation", "Returns"],
+    productsOffered: "Premium Clothings, Premium Footwears, Premium Accessories, Premium Watches, Premium Jewelries, Premium Handbags",
+    brandsDistributed: [],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      tuesday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      wednesday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      thursday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      friday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "liquidation"],
+    supplierType: ["liquidator"],
+    productQualityTier: ["budget", "mid-range"],
+    isSupplierPro: true,
+    companyLogo: "https://ui-avatars.com/api/?name=SV&background=8e44ad&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "marketplace-seller"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: [],
+    catalogueSize: "5000-20000",
+    minimumOrderAmount: 100,
+    minimumOrderCurrency: "GBP",
+    paymentMethods: ["bank-transfer", "credit-debit-card"],
+    deliveryMethods: ["national-post", "pallet-delivery"],
+    leadTime: "3-5-days",
+    countriesServed: ["GB", "DE", "FR"],
+    facilitySize: 8000,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2020,
+    preferredCurrency: "GBP",
+    sampleAvailability: "on-request",
+    salutation: "Ms",
   },
   {
     id: 4,
-    name: "TechWorld Electronics Wholesale",
-    country: "US",
-    countryName: "United States",
+    slug: "techworld-electronics-inc",
+    companyName: "TechWorld Electronics Inc",
     rating: 4.8,
     reviewCount: 42,
     yearsActive: 12,
-    verified: true,
-    description: "Major US electronics wholesaler specialising in consumer tech, laptops, tablets, gaming accessories, and smart home devices. Direct partnerships with top brands ensure competitive pricing and authentic products.",
-    phone: "+12125551234",
-    email: "sales@techworldwholesale.com",
-    address: "350 Fifth Avenue, New York, USA",
-    zip: "10118",
-    city: "New York",
-    website: "www.techworldwholesale.com",
-    contactName: "Mike Reynolds",
-    contactPosition: "VP Sales",
-    categories: ["Computing", "Consumer Electronic", "Mobile & Home Phones"],
-    products: "Laptops, Tablets, Smartphones, Gaming Accessories, Smart Home Devices",
-    brands: ["Apple", "Samsung", "Sony", "Dell", "HP"],
-    openingHours: "08:00-18:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "B2B", "Dropshipping"],
+    isVerified: true,
+    companyDescription: "Major US electronics wholesaler specialising in consumer tech, laptops, tablets, gaming accessories, and smart home devices. Direct partnerships with top brands ensure competitive pricing and authentic products.",
+    contact: {
+      name: "Mike Reynolds",
+      roleInCompany: "VP Sales",
+      mobileNumber: "+12125551234",
+      businessEmail: "sales@techworldwholesale.com",
+    },
+    address: {
+      street: "350 Fifth Avenue",
+      city: "New York",
+      postalCode: "10118",
+      country: "United States",
+      countryCode: "us",
+    },
+    companyWebsite: "www.techworldwholesale.com",
+    categories: ["Computing", "Consumer Electronics", "Mobile & Home Phones"],
+    productsOffered: "Laptops, Tablets, Smartphones, Gaming Accessories, Smart Home Devices",
+    brandsDistributed: ["Apple", "Samsung", "Sony", "Dell", "HP"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "08:00", close: "18:00" }] },
+      tuesday: { status: "open", slots: [{ open: "08:00", close: "18:00" }] },
+      wednesday: { status: "open", slots: [{ open: "08:00", close: "18:00" }] },
+      thursday: { status: "open", slots: [{ open: "08:00", close: "18:00" }] },
+      friday: { status: "open", slots: [{ open: "08:00", close: "18:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "dropshipping", "private-label"],
+    supplierType: ["wholesaler", "importer"],
+    productQualityTier: ["mid-range"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=TZ&background=2ecc71&color=fff&size=96&bold=true",
+    buyerTypesServed: ["online-retailer", "shop-retailer", "dropshipper"],
+    customersServed: ["registered-companies", "sole-traders", "individuals"],
+    certifications: ["fda", "rohs"],
+    catalogueSize: "5000-20000",
+    minimumOrderAmount: 500,
+    minimumOrderCurrency: "USD",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit", "paypal"],
+    deliveryMethods: ["fedex", "ups", "own-fleet", "freight"],
+    leadTime: "3-5-days",
+    countriesServed: ["US", "CA", "MX"],
+    facilitySize: 12000,
+    facilitySizeUnit: "m²",
+    companySize: "100-500",
+    yearEstablished: 2014,
+    preferredCurrency: "USD",
+    sampleAvailability: "free",
+    salutation: "Mr",
   },
   {
     id: 5,
-    name: "EuroBeauty Distribution",
-    country: "FR",
-    countryName: "France",
+    slug: "eurobeauty-distribution",
+    companyName: "EuroBeauty Distribution",
     rating: 4.6,
     reviewCount: 31,
     yearsActive: 9,
-    verified: true,
-    description: "Leading European distributor of premium beauty, skincare, and fragrance products. Authorised stockist for over 200 brands including prestige and mass-market lines. Full dropship capability across EU. Our Paris headquarters manages logistics for over 15,000 active products with temperature-controlled storage for sensitive skincare and fragrance lines. We offer white-label packaging services, custom gift set assembly, and branded display stands for retail partners. New collections are added monthly with exclusive early access for premium trade members. Our dedicated account managers provide personalised product recommendations based on your customer demographics and regional trends.",
-    phone: "+33142567890",
-    email: "contact@eurobeauty.fr",
-    address: "25 Rue de Rivoli, Paris, France",
-    zip: "75001",
-    city: "Paris",
-    website: "www.eurobeauty.fr",
-    contactName: "Sophie Laurent",
-    contactPosition: "Commercial Director",
+    isVerified: true,
+    companyDescription: "Leading European distributor of premium beauty, skincare, and fragrance products. Authorised stockist for over 200 brands including prestige and mass-market lines. Full dropship capability across EU. Our Paris headquarters manages logistics for over 15,000 active products with temperature-controlled storage for sensitive skincare and fragrance lines. We offer white-label packaging services, custom gift set assembly, and branded display stands for retail partners. New collections are added monthly with exclusive early access for premium trade members. Our dedicated account managers provide personalised product recommendations based on your customer demographics and regional trends.",
+    contact: {
+      name: "Sophie Laurent",
+      roleInCompany: "Commercial Director",
+      mobileNumber: "+33142567890",
+      businessEmail: "contact@eurobeauty.fr",
+    },
+    address: {
+      street: "25 Rue de Rivoli",
+      city: "Paris",
+      postalCode: "75001",
+      country: "France",
+      countryCode: "fr",
+    },
+    companyWebsite: "www.eurobeauty.fr",
     categories: ["Health & Beauty", "Jewellery & Watches"],
-    products: "Skincare, Makeup, Perfumes, Hair Care, Nail Care, Beauty Tools",
-    brands: ["L'Oréal", "Chanel", "Dior", "Estée Lauder"],
-    openingHours: "09:00-17:30",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "Dropshipping"],
+    productsOffered: "Skincare, Makeup, Perfumes, Hair Care, Nail Care, Beauty Tools",
+    brandsDistributed: ["L'Oréal", "Chanel", "Dior", "Estée Lauder"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "09:00", close: "17:30" }] },
+      tuesday: { status: "open", slots: [{ open: "09:00", close: "17:30" }] },
+      wednesday: { status: "open", slots: [{ open: "09:00", close: "17:30" }] },
+      thursday: { status: "open", slots: [{ open: "09:00", close: "17:30" }] },
+      friday: { status: "open", slots: [{ open: "09:00", close: "17:30" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "dropshipping"],
+    supplierType: ["manufacturer", "brand-owner"],
+    productQualityTier: ["premium", "luxury"],
+    isSupplierPro: true,
+    companyLogo: "https://ui-avatars.com/api/?name=EB&background=e67e22&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "multi-chain"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: ["rohs", "reach", "organic"],
+    catalogueSize: "1000-5000",
+    minimumOrderAmount: 200,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit", "letter-of-credit"],
+    deliveryMethods: ["dhl", "fedex", "ups"],
+    leadTime: "1-2-weeks",
+    countriesServed: ["FR", "DE", "IT", "ES", "NL", "BE"],
+    facilitySize: 6000,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2017,
+    preferredCurrency: "EUR",
+    sampleAvailability: "paid",
+    salutation: "Ms",
   },
   {
     id: 6,
-    name: "Nordic Home & Living AB",
-    country: "DE",
-    countryName: "Germany",
+    slug: "nordic-home-living-gmbh",
+    companyName: "Nordic Home & Living GmbH",
     rating: 4.3,
     reviewCount: 16,
     yearsActive: 4,
-    verified: false,
-    description: "Scandinavian-inspired home and garden products wholesaler. Specialising in minimalist furniture, kitchen essentials, bedding, and outdoor living. All products meet EU quality and sustainability standards.",
-    phone: "+49891234567",
-    email: "info@nordichome.de",
-    address: "Maximilianstr. 12, Munich, Germany",
-    zip: "80539",
-    city: "Munich",
-    website: "www.nordichome.de",
-    contactName: "Klaus Weber",
-    contactPosition: "Founder",
+    isVerified: false,
+    companyDescription: "Scandinavian-inspired home and garden products wholesaler. Specialising in minimalist furniture, kitchen essentials, bedding, and outdoor living. All products meet EU quality and sustainability standards.",
+    contact: {
+      name: "Klaus Weber",
+      roleInCompany: "Founder",
+      mobileNumber: "+49891234567",
+      businessEmail: "info@nordichome.de",
+    },
+    address: {
+      street: "Maximilianstr. 12",
+      city: "Munich",
+      postalCode: "80539",
+      country: "Germany",
+      countryCode: "de",
+    },
+    companyWebsite: "www.nordichome.de",
     categories: ["Home & Garden"],
-    products: "Furniture, Kitchenware, Bedding, Garden Accessories, Home Decor",
-    brands: [],
-    openingHours: "08:30-16:30",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "B2B"],
+    productsOffered: "Furniture, Kitchenware, Bedding, Garden Accessories, Home Decor",
+    brandsDistributed: [],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "08:30", close: "16:30" }] },
+      tuesday: { status: "open", slots: [{ open: "08:30", close: "16:30" }] },
+      wednesday: { status: "open", slots: [{ open: "08:30", close: "16:30" }] },
+      thursday: { status: "open", slots: [{ open: "08:30", close: "16:30" }] },
+      friday: { status: "open", slots: [{ open: "08:30", close: "16:30" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "job-lots"],
+    supplierType: ["wholesaler"],
+    productQualityTier: ["budget"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=NH&background=f39c12&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer"],
+    customersServed: ["registered-companies"],
+    certifications: ["iso-14001"],
+    catalogueSize: "200-1000",
+    minimumOrderAmount: 300,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card"],
+    deliveryMethods: ["dhl", "ups", "own-fleet"],
+    leadTime: "2-4-weeks",
+    countriesServed: ["DE", "AT", "CH"],
+    facilitySize: 4500,
+    facilitySizeUnit: "m²",
+    companySize: "10-50",
+    yearEstablished: 2022,
+    preferredCurrency: "EUR",
+    sampleAvailability: "on-request",
+    salutation: "Mr",
   },
   {
     id: 7,
-    name: "KidZone Toys & Games Ltd",
-    country: "UK",
-    countryName: "United Kingdom",
+    slug: "kidzone-toys-games-ltd",
+    companyName: "KidZone Toys & Games Ltd",
     rating: 4.7,
     reviewCount: 28,
     yearsActive: 7,
-    verified: true,
-    description: "UK's fastest-growing toy and game wholesaler. Huge range of licensed character toys, educational games, outdoor play equipment, and arts & crafts supplies. Competitive MOQs and fast UK delivery. We hold licences for Disney, Marvel, Peppa Pig, PAW Patrol, and many more popular children's brands. Our Birmingham warehouse stocks over 8,000 unique toy lines with seasonal ranges updated quarterly. We serve nurseries, gift shops, garden centres, and online retailers with trade pricing starting from just 6 units per line. Full POS display solutions and promotional bundles available for in-store events and seasonal peaks including Christmas, Easter, and back-to-school periods.",
-    phone: "+4402078901234",
-    email: "trade@kidzonetoys.co.uk",
-    address: "Unit 8, Westfield Industrial Park, Birmingham, UK",
-    zip: "B1 2RA",
-    city: "Birmingham",
-    website: "www.kidzonetoys.co.uk",
-    contactName: "David Patel",
-    contactPosition: "Trade Manager",
+    isVerified: true,
+    companyDescription: "UK's fastest-growing toy and game wholesaler. Huge range of licensed character toys, educational games, outdoor play equipment, and arts & crafts supplies. Competitive MOQs and fast UK delivery. We hold licences for Disney, Marvel, Peppa Pig, PAW Patrol, and many more popular children's brands. Our Birmingham warehouse stocks over 8,000 unique toy lines with seasonal ranges updated quarterly. We serve nurseries, gift shops, garden centres, and online retailers with trade pricing starting from just 6 units per line. Full POS display solutions and promotional bundles available for in-store events and seasonal peaks including Christmas, Easter, and back-to-school periods.",
+    contact: {
+      name: "David Patel",
+      roleInCompany: "Trade Manager",
+      mobileNumber: "+4402078901234",
+      businessEmail: "trade@kidzonetoys.co.uk",
+    },
+    address: {
+      street: "Unit 8, Westfield Industrial Park",
+      city: "Birmingham",
+      postalCode: "B1 2RA",
+      country: "United Kingdom",
+      countryCode: "gb",
+    },
+    companyWebsite: "www.kidzonetoys.co.uk",
     categories: ["Toys & Games", "Baby Products"],
-    products: "Action Figures, Board Games, Dolls, Educational Toys, Outdoor Toys, Arts & Crafts",
-    brands: ["Hasbro", "LEGO", "Mattel", "Disney"],
-    openingHours: "07:30-16:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "Dropshipping", "Liquidation"],
+    productsOffered: "Action Figures, Board Games, Dolls, Educational Toys, Outdoor Toys, Arts & Crafts",
+    brandsDistributed: ["Hasbro", "LEGO", "Mattel", "Disney"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "07:30", close: "16:00" }] },
+      tuesday: { status: "open", slots: [{ open: "07:30", close: "16:00" }] },
+      wednesday: { status: "open", slots: [{ open: "07:30", close: "16:00" }] },
+      thursday: { status: "open", slots: [{ open: "07:30", close: "16:00" }] },
+      friday: { status: "open", slots: [{ open: "07:30", close: "16:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "dropshipping", "liquidation"],
+    supplierType: ["trading-company"],
+    productQualityTier: ["mid-range"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=KZ&background=9b59b6&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "market-trader"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: ["ce"],
+    catalogueSize: "1000-5000",
+    minimumOrderAmount: 6,
+    minimumOrderCurrency: "GBP",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit"],
+    deliveryMethods: ["national-post", "own-fleet"],
+    leadTime: "1-2-days",
+    countriesServed: ["GB", "DE", "FR"],
+    facilitySize: 7000,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2019,
+    preferredCurrency: "GBP",
+    sampleAvailability: "paid",
+    salutation: "Mr",
   },
   {
     id: 8,
-    name: "MegaPallets Liquidation",
-    country: "NL",
-    countryName: "Netherlands",
+    slug: "megapallets-bv",
+    companyName: "MegaPallets BV",
     rating: 3.9,
     reviewCount: 9,
     yearsActive: 3,
-    verified: false,
-    description: "Pallet and stocklot liquidator based in the Netherlands. We deal in customer returns, overstock, and end-of-line goods from major European retailers. Mixed pallets and sorted category pallets available.",
-    phone: "+31201234567",
-    email: "buy@megapallets.nl",
-    address: "Industrieweg 88, Amsterdam, Netherlands",
-    zip: "1099 AB",
-    city: "Amsterdam",
-    website: "www.megapallets.nl",
-    contactName: "Jan de Vries",
-    contactPosition: "Sales Manager",
-    categories: ["Surplus & Stocklots", "Consumer Electronic", "Apparel & Clothing"],
-    products: "Mixed Pallets, Sorted Pallets, Customer Returns, Overstock",
-    brands: [],
-    openingHours: "08:00-17:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Liquidation", "Returns", "Wholesale"],
+    isVerified: false,
+    companyDescription: "Pallet and stocklot liquidator based in the Netherlands. We deal in customer returns, overstock, and end-of-line goods from major European retailers. Mixed pallets and sorted category pallets available.",
+    contact: {
+      name: "Jan de Vries",
+      roleInCompany: "Sales Manager",
+      mobileNumber: "+31201234567",
+      businessEmail: "buy@megapallets.nl",
+    },
+    address: {
+      street: "Industrieweg 88",
+      city: "Amsterdam",
+      postalCode: "1099 AB",
+      country: "Netherlands",
+      countryCode: "nl",
+    },
+    companyWebsite: "www.megapallets.nl",
+    categories: ["Surplus & Stocklots", "Consumer Electronics", "Apparel & Clothing"],
+    productsOffered: "Mixed Pallets, Sorted Pallets, Customer Returns, Overstock",
+    brandsDistributed: [],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "08:00", close: "17:00" }] },
+      tuesday: { status: "open", slots: [{ open: "08:00", close: "17:00" }] },
+      wednesday: { status: "open", slots: [{ open: "08:00", close: "17:00" }] },
+      thursday: { status: "open", slots: [{ open: "08:00", close: "17:00" }] },
+      friday: { status: "open", slots: [{ open: "08:00", close: "17:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["liquidation", "wholesale"],
+    supplierType: ["liquidator"],
+    productQualityTier: ["budget", "mid-range"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=MP&background=3498db&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "wholesaler-reseller"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: [],
+    catalogueSize: "5000-20000",
+    minimumOrderAmount: 1000,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card"],
+    deliveryMethods: ["dhl", "ups", "pallet-delivery"],
+    leadTime: "1-2-weeks",
+    countriesServed: ["NL", "DE", "BE", "FR"],
+    facilitySize: 10000,
+    facilitySizeUnit: "m²",
+    companySize: "10-50",
+    yearEstablished: 2023,
+    preferredCurrency: "EUR",
+    sampleAvailability: "not-available",
+    salutation: "Mr",
   },
   {
     id: 9,
-    name: "Iberian Office Supplies SL",
-    country: "ES",
-    countryName: "Spain",
+    slug: "iberian-office-supplies-sl",
+    companyName: "Iberian Office Supplies SL",
     rating: 4.4,
     reviewCount: 14,
     yearsActive: 11,
-    verified: true,
-    description: "Office and business supplies wholesaler serving the Iberian Peninsula and wider Europe. Full range of stationery, printing supplies, office furniture, and tech accessories. Same-day dispatch on in-stock items.",
-    phone: "+34911234567",
-    email: "ventas@iberianoffice.es",
-    address: "Calle Gran Vía 28, Madrid, Spain",
-    zip: "28013",
-    city: "Madrid",
-    website: "www.iberianoffice.es",
-    contactName: "Carlos Ruiz",
-    contactPosition: "Export Manager",
+    isVerified: true,
+    companyDescription: "Office and business supplies wholesaler serving the Iberian Peninsula and wider Europe. Full range of stationery, printing supplies, office furniture, and tech accessories. Same-day dispatch on in-stock items.",
+    contact: {
+      name: "Carlos Ruiz",
+      roleInCompany: "Export Manager",
+      mobileNumber: "+34911234567",
+      businessEmail: "ventas@iberianoffice.es",
+    },
+    address: {
+      street: "Calle Gran Vía 28",
+      city: "Madrid",
+      postalCode: "28013",
+      country: "Spain",
+      countryCode: "es",
+    },
+    companyWebsite: "www.iberianoffice.es",
     categories: ["Office & Business", "Computing"],
-    products: "Stationery, Printers & Ink, Office Furniture, Filing Supplies",
-    brands: ["HP", "Canon", "Fellowes", "Rexel"],
-    openingHours: "09:00-18:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "B2B"],
+    productsOffered: "Stationery, Printers & Ink, Office Furniture, Filing Supplies",
+    brandsDistributed: ["HP", "Canon", "Fellowes", "Rexel"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "09:00", close: "18:00" }] },
+      tuesday: { status: "open", slots: [{ open: "09:00", close: "18:00" }] },
+      wednesday: { status: "open", slots: [{ open: "09:00", close: "18:00" }] },
+      thursday: { status: "open", slots: [{ open: "09:00", close: "18:00" }] },
+      friday: { status: "open", slots: [{ open: "09:00", close: "18:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "white-label"],
+    supplierType: ["exporter", "manufacturer"],
+    productQualityTier: ["premium"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=IOS&background=16a085&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "multi-chain"],
+    customersServed: ["registered-companies"],
+    certifications: ["iso-9001"],
+    catalogueSize: "1000-5000",
+    minimumOrderAmount: 150,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit"],
+    deliveryMethods: ["dhl", "fedex", "ups"],
+    leadTime: "1-2-days",
+    countriesServed: ["ES", "PT", "FR", "IT"],
+    facilitySize: 3500,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2015,
+    preferredCurrency: "EUR",
+    sampleAvailability: "free",
+    salutation: "Mr",
   },
   {
     id: 10,
-    name: "Roma Fashion Italia",
-    country: "IT",
-    countryName: "Italy",
+    slug: "roma-fashion-italia",
+    companyName: "Roma Fashion Italia",
     rating: 4.9,
     reviewCount: 37,
     yearsActive: 15,
-    verified: true,
-    description: "Premium Italian fashion wholesaler offering authentic Made in Italy clothing, leather goods, shoes, and accessories. Direct from Italian manufacturers and ateliers. Specialising in luxury and mid-range fashion brands. We work directly with over 60 Italian artisan workshops and fashion houses to bring you exclusive collections that cannot be found through mainstream wholesale channels. Each season we curate a hand-selected range of leather jackets, silk scarves, handcrafted shoes, and designer handbags with full certificates of authenticity. Our export team handles all customs documentation and VAT reclaim paperwork for non-EU buyers, making international trade seamless.",
-    phone: "+390612345678",
-    email: "export@romafashion.it",
-    address: "Via del Corso 120, Rome, Italy",
-    zip: "00186",
-    city: "Rome",
-    website: "www.romafashion.it",
-    contactName: "Giulia Rossi",
-    contactPosition: "International Sales",
+    isVerified: true,
+    companyDescription: "Premium Italian fashion wholesaler offering authentic Made in Italy clothing, leather goods, shoes, and accessories. Direct from Italian manufacturers and ateliers. Specialising in luxury and mid-range fashion brands. We work directly with over 60 Italian artisan workshops and fashion houses to bring you exclusive collections that cannot be found through mainstream wholesale channels. Each season we curate a hand-selected range of leather jackets, silk scarves, handcrafted shoes, and designer handbags with full certificates of authenticity. Our export team handles all customs documentation and VAT reclaim paperwork for non-EU buyers, making international trade seamless.",
+    contact: {
+      name: "Giulia Rossi",
+      roleInCompany: "International Sales",
+      mobileNumber: "+390612345678",
+      businessEmail: "export@romafashion.it",
+    },
+    address: {
+      street: "Via del Corso 120",
+      city: "Rome",
+      postalCode: "00186",
+      country: "Italy",
+      countryCode: "it",
+    },
+    companyWebsite: "www.romafashion.it",
     categories: ["Apparel & Clothing", "Jewellery & Watches"],
-    products: "Designer Clothing, Leather Goods, Shoes, Handbags, Accessories",
-    brands: ["Gucci", "Prada", "Armani", "Versace"],
-    openingHours: "09:00-17:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "B2B"],
+    productsOffered: "Designer Clothing, Leather Goods, Shoes, Handbags, Accessories",
+    brandsDistributed: ["Gucci", "Prada", "Armani", "Versace"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      tuesday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      wednesday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      thursday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      friday: { status: "open", slots: [{ open: "09:00", close: "17:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "private-label"],
+    supplierType: ["wholesaler", "distributor"],
+    productQualityTier: ["luxury"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=RFI&background=c0392b&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "multi-chain"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: [],
+    catalogueSize: "200-1000",
+    minimumOrderAmount: 500,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "letter-of-credit"],
+    deliveryMethods: ["dhl", "fedex", "ups", "freight"],
+    leadTime: "2-4-weeks",
+    countriesServed: ["IT", "EU", "US"],
+    facilitySize: 2500,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2011,
+    preferredCurrency: "EUR",
+    sampleAvailability: "paid",
+    salutation: "Ms",
   },
   {
     id: 11,
-    name: "Warsaw Electronics Hub",
-    country: "PL",
-    countryName: "Poland",
+    slug: "warsaw-electronics-hub",
+    companyName: "Warsaw Electronics Hub Sp. z o.o.",
     rating: 4.1,
     reviewCount: 11,
     yearsActive: 5,
-    verified: false,
-    description: "Central European electronics wholesaler based in Warsaw. Competitive pricing on smartphones, tablets, audio equipment, and computer peripherals. Fast shipping across EU with full warranty support.",
-    phone: "+48221234567",
-    email: "sales@warsawehub.pl",
-    address: "Ul. Marszałkowska 56, Warsaw, Poland",
-    zip: "00-545",
-    city: "Warsaw",
-    website: "www.warsawehub.pl",
-    contactName: "Tomasz Kowalski",
-    contactPosition: "CEO",
-    categories: ["Consumer Electronic", "Mobile & Home Phones", "Computing"],
-    products: "Smartphones, Tablets, Headphones, Speakers, Computer Parts",
-    brands: ["Samsung", "Xiaomi", "JBL", "Logitech"],
-    openingHours: "08:00-16:00",
-    openDays: [false, true, true, true, true, true, false],
-    focus: ["Wholesale", "Dropshipping"],
+    isVerified: false,
+    companyDescription: "Central European electronics wholesaler based in Warsaw. Competitive pricing on smartphones, tablets, audio equipment, and computer peripherals. Fast shipping across EU with full warranty support.",
+    contact: {
+      name: "Tomasz Kowalski",
+      roleInCompany: "CEO",
+      mobileNumber: "+48221234567",
+      businessEmail: "sales@warsawehub.pl",
+    },
+    address: {
+      street: "Ul. Marszałkowska 56",
+      city: "Warsaw",
+      postalCode: "00-545",
+      country: "Poland",
+      countryCode: "pl",
+    },
+    companyWebsite: "www.warsawehub.pl",
+    categories: ["Consumer Electronics", "Mobile & Home Phones", "Computing"],
+    productsOffered: "Smartphones, Tablets, Headphones, Speakers, Computer Parts",
+    brandsDistributed: ["Samsung", "Xiaomi", "JBL", "Logitech"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      tuesday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      wednesday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      thursday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      friday: { status: "open", slots: [{ open: "08:00", close: "16:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "dropshipping"],
+    supplierType: ["importer"],
+    productQualityTier: ["mid-range"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=WEH&background=2980b9&color=fff&size=96&bold=true",
+    buyerTypesServed: ["online-retailer", "shop-retailer", "dropshipper"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: ["ce", "rohs"],
+    catalogueSize: "1000-5000",
+    minimumOrderAmount: 300,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit"],
+    deliveryMethods: ["dhl", "ups", "own-fleet"],
+    leadTime: "2-4-weeks",
+    countriesServed: ["PL", "DE", "CZ", "SK"],
+    facilitySize: 5500,
+    facilitySizeUnit: "m²",
+    companySize: "10-50",
+    yearEstablished: 2021,
+    preferredCurrency: "EUR",
+    sampleAvailability: "on-request",
+    salutation: "Mr",
   },
   {
     id: 12,
-    name: "ActiveLife Sports Distribution",
-    country: "UK",
-    countryName: "United Kingdom",
+    slug: "activelife-sports-distribution-ltd",
+    companyName: "ActiveLife Sports Distribution Ltd",
     rating: 4.5,
     reviewCount: 20,
     yearsActive: 6,
-    verified: true,
-    description: "Sports and fitness equipment wholesaler. Covering gym equipment, outdoor gear, cycling accessories, running shoes, and athletic wear. Authorised distributor for multiple premium sports brands.",
-    phone: "+4401234567890",
-    email: "trade@activelifesports.co.uk",
-    address: "25 Olympic Way, Leeds, UK",
-    zip: "LS1 4AP",
-    city: "Leeds",
-    website: "www.activelifesports.co.uk",
-    contactName: "Emma Clarke",
-    contactPosition: "Wholesale Manager",
+    isVerified: true,
+    companyDescription: "Sports and fitness equipment wholesaler. Covering gym equipment, outdoor gear, cycling accessories, running shoes, and athletic wear. Authorised distributor for multiple premium sports brands.",
+    contact: {
+      name: "Emma Clarke",
+      roleInCompany: "Wholesale Manager",
+      mobileNumber: "+4401234567890",
+      businessEmail: "trade@activelifesports.co.uk",
+    },
+    address: {
+      street: "25 Olympic Way",
+      city: "Leeds",
+      postalCode: "LS1 4AP",
+      country: "United Kingdom",
+      countryCode: "gb",
+    },
+    companyWebsite: "www.activelifesports.co.uk",
     categories: ["Sports & Fitness", "Apparel & Clothing"],
-    products: "Gym Equipment, Running Shoes, Cycling Gear, Athletic Wear, Fitness Accessories",
-    brands: ["Nike", "Adidas", "Under Armour", "Puma", "New Balance"],
-    openingHours: "07:00-16:00",
-    openDays: [false, true, true, true, true, true, true],
-    focus: ["Wholesale", "B2B", "Dropshipping"],
+    productsOffered: "Gym Equipment, Running Shoes, Cycling Gear, Athletic Wear, Fitness Accessories",
+    brandsDistributed: ["Nike", "Adidas", "Under Armour", "Puma", "New Balance"],
+    businessHours: {
+      sunday: { status: "open", slots: [{ open: "10:00", close: "16:00" }] },
+      monday: { status: "open", slots: [{ open: "07:00", close: "16:00" }] },
+      tuesday: { status: "open", slots: [{ open: "07:00", close: "16:00" }] },
+      wednesday: { status: "open", slots: [{ open: "07:00", close: "16:00" }] },
+      thursday: { status: "open", slots: [{ open: "07:00", close: "16:00" }] },
+      friday: { status: "open", slots: [{ open: "07:00", close: "16:00" }] },
+      saturday: { status: "open", slots: [{ open: "08:00", close: "14:00" }] },
+    },
+    supplyModels: ["wholesale", "dropshipping", "job-lots"],
+    supplierType: ["distributor", "dropshipper"],
+    productQualityTier: ["mid-range", "premium"],
+    isSupplierPro: false,
+    companyLogo: "https://ui-avatars.com/api/?name=ALS&background=27ae60&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "market-trader"],
+    customersServed: ["registered-companies", "sole-traders", "individuals"],
+    certifications: ["iso-9001"],
+    catalogueSize: "1000-5000",
+    minimumOrderAmount: 50,
+    minimumOrderCurrency: "GBP",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit"],
+    deliveryMethods: ["dhl", "national-post", "own-fleet"],
+    leadTime: "1-2-days",
+    countriesServed: ["GB", "DE", "FR", "NL"],
+    facilitySize: 4000,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2020,
+    preferredCurrency: "GBP",
+    sampleAvailability: "free",
+    salutation: "Ms",
+  },
+  {
+    id: 13,
+    slug: "eurogourmet-trading-gmbh",
+    companyName: "EuroGourmet Trading GmbH",
+    rating: 4.9,
+    reviewCount: 31,
+    yearsActive: 12,
+    isVerified: true,
+    companyDescription: "Specialist wholesale supplier of premium European food and beverages. We source directly from artisan producers across Italy, France, Spain, and Austria, offering authentic olive oils, aged cheeses, cured meats, fine wines, craft beers, and gourmet confectionery. Our temperature-controlled warehouse in Vienna serves retailers, delicatessens, hotels, and online food shops throughout Europe with next-day chilled delivery to 14 countries. All products carry full traceability documentation and EU food safety certification. We also offer private-label packaging for retailers wanting own-brand premium ranges.",
+    contact: {
+      name: "Maximilian Hofer",
+      roleInCompany: "Head of Sales",
+      mobileNumber: "+4315551234",
+      businessEmail: "wholesale@eurogourmet.at",
+    },
+    address: {
+      street: "Handelskai 94, 1200",
+      city: "Vienna",
+      postalCode: "1200",
+      country: "Austria",
+      countryCode: "at",
+    },
+    companyWebsite: "www.eurogourmet-trading.at",
+    categories: ["Food & Beverages", "Health & Beauty", "Home Supplies"],
+    productsOffered: "Olive Oils, Artisan Cheeses, Cured Meats, Fine Wines, Craft Beer, Gourmet Confectionery, Organic Pantry Staples",
+    brandsDistributed: ["De Cecco", "Lavazza", "Riedel", "Staud's"],
+    businessHours: {
+      sunday: { status: "closed", slots: [] },
+      monday: { status: "open", slots: [{ open: "07:30", close: "17:00" }] },
+      tuesday: { status: "open", slots: [{ open: "07:30", close: "17:00" }] },
+      wednesday: { status: "open", slots: [{ open: "07:30", close: "17:00" }] },
+      thursday: { status: "open", slots: [{ open: "07:30", close: "17:00" }] },
+      friday: { status: "open", slots: [{ open: "07:30", close: "17:00" }] },
+      saturday: { status: "closed", slots: [] },
+    },
+    supplyModels: ["wholesale", "private-label", "white-label"],
+    supplierType: ["importer", "distributor"],
+    productQualityTier: ["premium", "luxury"],
+    isSupplierPro: true,
+    companyLogo: "https://ui-avatars.com/api/?name=EG&background=1e5299&color=fff&size=96&bold=true",
+    buyerTypesServed: ["shop-retailer", "online-retailer", "multi-chain"],
+    customersServed: ["registered-companies", "sole-traders"],
+    certifications: ["gmp", "haccp", "organic", "iso-9001"],
+    catalogueSize: "200-1000",
+    minimumOrderAmount: 400,
+    minimumOrderCurrency: "EUR",
+    paymentMethods: ["bank-transfer", "credit-debit-card", "trade-credit", "letter-of-credit"],
+    deliveryMethods: ["dhl", "fedex", "ups", "freight"],
+    leadTime: "1-2-weeks",
+    countriesServed: ["AT", "DE", "IT", "FR", "ES"],
+    facilitySize: 8000,
+    facilitySizeUnit: "m²",
+    companySize: "50-100",
+    yearEstablished: 2014,
+    preferredCurrency: "EUR",
+    sampleAvailability: "paid",
+    salutation: "Mr",
   },
 ];
 
@@ -571,11 +971,34 @@ const REVIEWS = [
 ];
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const SUPPLY_MODEL_LABELS = { wholesale: "Wholesale", dropshipping: "Dropshipping", liquidation: "Liquidation", "white-label": "White Label", "private-label": "Private Label", "job-lots": "Job Lots" };
+const SUPPLIER_TYPE_LABELS = { manufacturer: "Manufacturer", "brand-owner": "Brand Owner", "private-label": "Private / White Label", wholesaler: "Wholesaler", distributor: "Distributor", importer: "Importer", exporter: "Exporter", "trading-company": "Trading Company", liquidator: "Liquidator / Clearance", dropshipper: "Dropshipper", "sourcing-agent": "Sourcing Agent", "artisan-maker": "Artisan / Maker" };
+const QUALITY_LABELS = { budget: "Budget / Value", "mid-range": "Mid-Range", premium: "Premium", luxury: "Luxury" };
+
+/* ── Anonymous display name for non-authorised users ──
+   Generates "Category + Supplier Type", e.g. "Home & Garden Wholesaler"
+   Falls back to first category or "Supplier" if data is missing. */
+function getAnonymousName(supplier) {
+  const rawCat = supplier.productCategories?.[0] || supplier.categories?.[0] || "";
+  // Convert slugs like "mobile-phones" → "Mobile Phones"
+  const firstCat = rawCat.includes("-") ? rawCat.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : rawCat;
+  const types = supplier.supplierType || [];
+  const typeLabel = types.length > 0
+    ? types.map((st) => SUPPLIER_TYPE_LABELS[st] || st).join(" & ")
+    : "Supplier";
+  // Strip trailing " Supplier" or " Lots" from category names
+  const cleanCat = firstCat.replace(/\s+(Supplier|Lots)$/i, "");
+  return cleanCat ? `${cleanCat} ${typeLabel}` : typeLabel;
+}
 
 /* ═══════════════════════════════════════════════════
    1. SUPPLIER CARD — used in the suppliers listing page
    ═══════════════════════════════════════════════════ */
-function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onContact, onReportInvalid, keyword }) {
+function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onContact, onCallNow, onReportInvalid, keyword }) {
+  const canContact = isPremium || (isLoggedIn && supplier.isSupplierPro);
+  const canViewBranding = isLoggedIn && (supplier.isSupplierPro || isPremium);
+  const displayName = canViewBranding && supplier.companyName ? supplier.companyName : getAnonymousName(supplier);
+  const openRegisterModal = () => window.dispatchEvent(new CustomEvent("open-auth-modal", { detail: { tab: "register" } }));
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(null);
   const [faved, setFaved] = useState(false);
@@ -588,7 +1011,19 @@ function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onConta
   };
 
   return (
-    <div className="relative bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all duration-300 group">
+    <div className={`relative rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group bg-white cursor-pointer ${
+      supplier.isSupplierPro
+        ? "border-l-[3px] border-l-[#1e5299] border border-[#1e5299]/30 hover:border-[#1e5299]/50"
+        : "border border-slate-200 hover:border-orange-200"
+    }`} onClick={(e) => { if (!e.target.closest("a, button, input, [role=button]")) window.location.href = "/supplier"; }}>
+      {/* Supplier Pro badge */}
+      {supplier.isSupplierPro && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 bg-[#1e5299] text-white text-[10px] font-bold rounded-md shadow-sm">
+          <Crown size={10} className="shrink-0" />
+          PRO
+        </div>
+      )}
+
       {/* Hidden overlay */}
       {hidden && (
         <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-xl">
@@ -604,57 +1039,112 @@ function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onConta
       {/* Header */}
       <div className="p-5 pb-0">
         <div className="flex items-start justify-between gap-3">
+          {/* Company Logo — visible only when canViewBranding is true (isLoggedIn && (isSupplierPro || isPremium)) */}
+          {supplier.companyLogo && canViewBranding && (
+            <img src={supplier.companyLogo} alt={`${displayName} logo`} className="h-12 w-12 object-contain rounded-lg border border-slate-100 bg-slate-50 shrink-0 mt-0.5" />
+          )}
+          {supplier.companyLogo && !canViewBranding && (
+            <LockedLogoPlaceholder
+              size="lg"
+              href={isLoggedIn ? "/pricing" : undefined}
+              onClick={!isLoggedIn ? (e) => { e.preventDefault(); openRegisterModal(); } : undefined}
+              title={isLoggedIn ? "Upgrade to see supplier branding" : "Register to see supplier branding"}
+              className="mt-0.5"
+            />
+          )}
           <div className="flex-1 min-w-0">
-            <a href={`/supplier/${supplier.id}`} className="group/name">
+            {supplier.isVerified && (
+              <div className="mb-1.5">
+                <VerifiedBadge size={8} className="text-[9px] px-1.5 py-px" />
+              </div>
+            )}
+            <a href="/supplier" className="group/name">
               <h3 className="text-lg font-bold text-slate-900 group-hover/name:text-orange-600 transition-colors">
-                {supplier.name}
+                {displayName}
               </h3>
             </a>
+            {(supplier.supplierType?.length > 0 || supplier.productQualityTier?.length > 0) && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {supplier.supplierType?.map((st) => (
+                  <span key={st} className="px-1.5 py-px text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-md">
+                    {SUPPLIER_TYPE_LABELS[st] || st}
+                  </span>
+                ))}
+                {supplier.productQualityTier?.map((qt) => (
+                  <span key={qt} className="px-1.5 py-px text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-md">
+                    {QUALITY_LABELS[qt] || qt}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
               <span className="flex items-center gap-1.5 text-sm text-slate-500">
-                <FlagImg code={supplier.country} size={18} />
-                {supplier.countryName}
+                <FlagImg code={supplier.address.countryCode} size={18} />
+                {supplier.address.country}
               </span>
-              <span className="text-slate-300">&middot;</span>
-              <StarRating rating={supplier.rating} size={13} showValue />
               <span className="text-slate-300">&middot;</span>
               <span className="flex items-center gap-1 text-xs text-slate-400">
                 <Calendar size={12} />
                 {supplier.yearsActive} yrs
               </span>
               <span className="text-slate-300">&middot;</span>
-              <span className="flex items-center gap-1 text-xs text-slate-400">
-                <Clock size={12} />
-                {supplier.openingHours}
-              </span>
-              {supplier.verified && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded">
-                  <BadgeCheck size={10} />
-                  Verified
-                </span>
-              )}
+              <a href="/supplier?tab=reviews" className="hover:opacity-80 transition-opacity">
+                <StarRating rating={supplier.rating} size={13} showValue />
+              </a>
             </div>
+            {/* Supply model tags — Wholesale, Dropshipping, White Label, etc. */}
+            {supplier.supplyModels?.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {supplier.supplyModels.map((f) => (
+                  <span key={f} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-md">
+                    <CheckCircle2 size={9} className="text-emerald-500 shrink-0" />
+                    {SUPPLY_MODEL_LABELS[f] || f}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           {/* Hide + Favourite + Action Buttons */}
           <div className="flex items-center gap-2 shrink-0">
             <div className={`flex items-center gap-1 transition-all ${faved || hidden ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-              <button onClick={() => setHidden(true)}
+              <button onClick={() => isLoggedIn ? setHidden(true) : openRegisterModal()}
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
                 <EyeOff size={14} className="text-slate-400" />
               </button>
-              <button onClick={() => setFaved(!faved)}
+              <button onClick={() => isLoggedIn ? setFaved(!faved) : openRegisterModal()}
                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${faved ? "bg-red-500 shadow-sm hover:bg-red-600" : "bg-slate-100 hover:bg-slate-200"}`}>
                 <Heart size={14} className={faved ? "fill-white text-white" : "text-slate-400"} />
               </button>
             </div>
-            <button className="px-5 py-2.5 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-2">
-              <Phone size={15} />
-              Call Now
-            </button>
-            <button onClick={() => onContact?.(supplier)} className="px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
-              <MessageSquare size={15} />
-              Send Enquiry
-            </button>
+            {canContact ? (
+              <button onClick={() => onCallNow?.(supplier)} className="px-5 py-2.5 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center gap-2 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <Phone size={15} /> Call Now
+              </button>
+            ) : isLoggedIn ? (
+              <a href="/pricing" className="px-5 py-2.5 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center gap-2 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <Lock size={15} /> Call Now
+              </a>
+            ) : (
+              <button onClick={openRegisterModal} className="px-5 py-2.5 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center gap-2 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <Phone size={15} /> Call Now
+              </button>
+            )}
+            {canContact ? (
+              <button onClick={() => onContact?.(supplier)} className="px-5 py-2.5 text-sm font-semibold text-white bg-[#1e5299] hover:bg-[#174280] rounded-lg flex items-center gap-2 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <MessageSquare size={15} />
+                Send Enquiry
+              </button>
+            ) : isLoggedIn ? (
+              <a href="/pricing" className="px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg flex items-center gap-2 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <Lock size={15} />
+                Send Enquiry
+              </a>
+            ) : (
+              <button onClick={openRegisterModal} className="px-5 py-2.5 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg flex items-center gap-2 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <MessageSquare size={15} />
+                Send Enquiry
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -663,12 +1153,12 @@ function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onConta
       <div className="px-5 pt-3.5 pb-0">
         <div className="flex flex-wrap gap-2">
           {supplier.categories.slice(0, 4).map((cat) => (
-            <a key={cat} href="#" className="px-3.5 py-1.5 text-xs font-semibold text-emerald-700 bg-white border border-emerald-300 rounded-full hover:bg-emerald-50 transition-colors">
+            <a key={cat} href={`/suppliers?any=${encodeURIComponent(cat)}`} className="px-3.5 py-1.5 text-xs font-semibold text-emerald-700 bg-white border border-emerald-300 rounded-md hover:bg-emerald-50 transition-colors">
               {cat}
             </a>
           ))}
           {supplier.categories.length > 4 && (
-            <span className="px-3.5 py-1.5 text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-full">
+            <span className="px-3.5 py-1.5 text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-md">
               +{supplier.categories.length - 4} more
             </span>
           )}
@@ -681,114 +1171,86 @@ function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onConta
         <div className="mb-5">
           <h4 className="text-sm font-bold text-slate-800 mb-2">Description</h4>
           <div
-            className="text-sm text-slate-600 leading-relaxed overflow-y-auto custom-scrollbar"
+            className="text-sm text-slate-600 leading-relaxed overflow-y-auto custom-scrollbar whitespace-pre-line"
             style={{ maxHeight: "5.6em" }}
           >
-            <HighlightedText text={supplier.description} keyword={keyword} />
+            <HighlightedText text={supplier.companyDescription.replace(/\n\n+/g, "\n")} keyword={keyword} />
+            {supplier.productsOffered && (
+              <p className="mt-2"><HighlightedText text={supplier.productsOffered} keyword={keyword} /></p>
+            )}
+            {supplier.brandsDistributed?.length > 0 && (
+              <p className="mt-2"><HighlightedText text={supplier.brandsDistributed.join(", ")} keyword={keyword} /></p>
+            )}
           </div>
         </div>
 
-        {/* Contact Details — 4 column grid with overlay for free tier */}
-        <div className="relative">
-          <div className={`bg-slate-50 rounded-lg p-4 ${!isPremium ? "max-h-24 overflow-hidden" : ""}`}>
-            {/* Icons row */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="sm:w-1/5 shrink-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0">
-                    <Phone size={13} className="text-slate-500" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-700">Phone <button onClick={() => onReportInvalid?.(supplier, "Phone")} className="text-[10px] font-normal text-red-400 hover:text-red-500 cursor-pointer ml-1">(invalid?)</button></p>
-                </div>
-                <div className="pl-9">
-                  <BlurredText text={supplier.phone} isPremium={isPremium} className="text-xs text-slate-600" />
-                  {isPremium && (
-                    <button onClick={() => copyToClipboard(supplier.phone, "phone")} className="p-0.5 hover:bg-slate-100 rounded transition-colors ml-1 inline-flex">
-                      {copied === "phone" ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} className="text-slate-400" />}
-                    </button>
-                  )}
-                </div>
+        {/* Contact Details — mini business card for Premium, clean lock card for gated */}
+        {canContact ? (
+          <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+            {/* Card header — contact person identity */}
+            <div className="px-3.5 py-2 bg-gradient-to-r from-blue-50 to-slate-50 flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                <span className="text-[10px] font-bold text-white">
+                  {supplier.contact.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "?"}
+                </span>
               </div>
-
-              <div className="sm:w-1/5 shrink-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0">
-                    <Mail size={13} className="text-slate-500" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-700">Email Address <button onClick={() => onReportInvalid?.(supplier, "Email Address")} className="text-[10px] font-normal text-red-400 hover:text-red-500 cursor-pointer ml-1">(invalid?)</button></p>
-                </div>
-                <div className="pl-9">
-                  <button
-                    onClick={() => onContact?.(supplier)}
-                    className="text-xs text-orange-600 font-medium hover:text-orange-700 transition-colors flex items-center gap-1"
-                  >
-                    <Mail size={12} /> Contact Supplier
-                  </button>
-                </div>
-              </div>
-
-              <div className="sm:w-2/5 shrink-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0">
-                    <MapPin size={13} className="text-slate-500" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-700">Address <button onClick={() => onReportInvalid?.(supplier, "Address")} className="text-[10px] font-normal text-red-400 hover:text-red-500 cursor-pointer ml-1">(invalid?)</button></p>
-                </div>
-                <div className="pl-9">
-                  {isPremium ? (
-                    <p className="text-xs text-slate-600 leading-relaxed">{supplier.address}, {supplier.zip}</p>
-                  ) : (
-                    <BlurredText text={supplier.address} isPremium={false} className="text-xs text-slate-600" />
-                  )}
-                </div>
-              </div>
-
-              <div className="sm:w-1/5 shrink-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0">
-                    <Globe size={13} className="text-slate-500" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-700">Website <button onClick={() => onReportInvalid?.(supplier, "Website")} className="text-[10px] font-normal text-red-400 hover:text-red-500 cursor-pointer ml-1">(invalid?)</button></p>
-                </div>
-                <div className="pl-9">
-                  {isPremium ? (
-                    <a href="#" className="text-xs text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-                      Visit Website
-                      <ExternalLink size={11} />
-                    </a>
-                  ) : (
-                    <BlurredText text={supplier.website} isPremium={false} className="text-xs text-orange-600 font-medium" />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Free/Guest Tier Overlay */}
-          {!isPremium && (
-            <div className="absolute inset-0 flex items-center justify-end bg-slate-50/80 backdrop-blur-[3px] rounded-lg pr-4">
-              <div className="text-right">
-                {isLoggedIn ? (
-                  <>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Upgrade to see supplier details</p>
-                    <a href="/pricing" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg shadow-sm hover:bg-orange-600 transition-all">
-                      <Lock size={11} />
-                      Upgrade Now
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">Join to access supplier details</p>
-                    <a href="/register" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg shadow-sm hover:bg-orange-600 transition-all">
-                      <Lock size={11} />
-                      Join Now!
-                    </a>
-                  </>
+              <div className="min-w-0 flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-700 truncate">{supplier.contact.name}</span>
+                {supplier.contact.roleInCompany && (
+                  <span className="text-[11px] text-slate-400 truncate hidden sm:inline">&middot; {supplier.contact.roleInCompany}</span>
                 )}
               </div>
             </div>
-          )}
-        </div>
+            {/* Card body — contact details row */}
+            <div className="px-3.5 py-2.5 flex items-center gap-x-5 gap-y-1.5 flex-wrap text-xs bg-white">
+              {supplier.contact.mobileNumber && (
+                <div className="flex items-center gap-1.5">
+                  <Phone size={11} className="text-slate-400 shrink-0" />
+                  <span className="text-slate-600">{supplier.contact.mobileNumber}</span>
+                  <button onClick={() => copyToClipboard(supplier.contact.mobileNumber, "phone")} className="p-0.5 hover:bg-slate-100 rounded transition-colors inline-flex">
+                    {copied === "phone" ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} className="text-slate-400" />}
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <Mail size={11} className="text-slate-400 shrink-0" />
+                <button onClick={() => onContact?.(supplier)} className="text-orange-600 font-medium hover:text-orange-700 transition-colors">
+                  Contact Supplier
+                </button>
+              </div>
+              {supplier.address?.street && (
+                <div className="flex items-center gap-1.5">
+                  <MapPin size={11} className="text-slate-400 shrink-0" />
+                  <span className="text-slate-600">{[supplier.address.street, supplier.address.postalCode, supplier.address.city].filter(Boolean).join(", ")}</span>
+                </div>
+              )}
+              {supplier.companyWebsite && (
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <Globe size={11} className="text-slate-400 shrink-0" />
+                  <WebsiteLink slug={supplier.slug} url={"https://" + supplier.companyWebsite} className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                    Visit Website <ExternalLink size={10} />
+                  </WebsiteLink>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-lg bg-slate-50 py-5 text-center">
+            <Lock size={18} className="text-slate-300 mx-auto mb-2" />
+            <p className="text-xs text-slate-400 mb-3">
+              {isLoggedIn ? "Contact details available to Premium members" : "Contact details available to registered members"}
+            </p>
+            {isLoggedIn ? (
+              <a href="/pricing" className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <Rocket size={13} /> Upgrade Now
+              </a>
+            ) : (
+              <button onClick={openRegisterModal} className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                <Lock size={13} /> Log In / Register
+              </button>
+            )}
+          </div>
+        )}
 
       </div>
     </div>
@@ -798,80 +1260,152 @@ function SupplierCard({ supplier, isPremium = false, isLoggedIn = false, onConta
 /* ═══════════════════════════════════════════════════
    1b. SUPPLIER GRID CARD — compact card for grid view
    ═══════════════════════════════════════════════════ */
-function SupplierGridCard({ supplier, isPremium = false, isLoggedIn = false, onContact, keyword }) {
+function SupplierGridCard({ supplier, isPremium = false, isLoggedIn = false, onContact, onCallNow, keyword }) {
+  const canContact = isPremium || (isLoggedIn && supplier.isSupplierPro);
+  const canViewBranding = isLoggedIn && (supplier.isSupplierPro || isPremium);
+  const displayName = canViewBranding && supplier.companyName ? supplier.companyName : getAnonymousName(supplier);
+  const openRegisterModal = () => window.dispatchEvent(new CustomEvent("open-auth-modal", { detail: { tab: "register" } }));
   const [faved, setFaved] = useState(false);
   const [hidden, setHidden] = useState(false);
 
   return (
-    <div className="relative bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg hover:border-orange-200 transition-all duration-300 flex flex-col group">
+    <div className={`relative rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col group bg-white cursor-pointer ${
+      supplier.isSupplierPro
+        ? "border-l-[3px] border-l-[#1e5299] border border-[#1e5299]/30 hover:border-[#1e5299]/50"
+        : "border border-slate-200 hover:border-orange-200"
+    }`} onClick={(e) => { if (!e.target.closest("a, button, input, [role=button]")) window.location.href = "/supplier"; }}>
+      {/* Supplier Pro badge */}
+      {supplier.isSupplierPro && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-1 bg-[#1e5299] text-white text-[10px] font-bold rounded-md shadow-sm">
+          <Crown size={10} className="shrink-0" />
+          PRO
+        </div>
+      )}
+
       {/* Hidden overlay */}
       {hidden && (
         <div className="absolute inset-0 z-20 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-xl">
           <EyeOff size={24} className="text-slate-300" />
           <p className="text-xs font-semibold text-slate-500">Supplier hidden</p>
           <button onClick={() => setHidden(false)}
-            className="px-3 py-1 text-[10px] font-bold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-1">
+            className="px-3 py-1 text-xs font-bold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-1">
             <Eye size={10} /> Unhide
           </button>
         </div>
       )}
 
       {/* Header band */}
-      <div className="bg-gradient-to-b from-slate-50 to-white px-4 pt-4 pb-3 border-b border-slate-100">
+      <div className="px-4 pt-4 pb-3 border-b border-slate-100">
         <div className="flex items-start justify-between gap-2">
+          {/* Company Logo — visible only when canViewBranding is true */}
+          {supplier.companyLogo && canViewBranding && (
+            <img src={supplier.companyLogo} alt={`${displayName} logo`} className="h-10 w-10 object-contain rounded-lg border border-slate-100 bg-slate-50 shrink-0 mt-0.5" />
+          )}
+          {supplier.companyLogo && !canViewBranding && (
+            <LockedLogoPlaceholder
+              size="sm"
+              href={isLoggedIn ? "/pricing" : undefined}
+              onClick={!isLoggedIn ? (e) => { e.preventDefault(); openRegisterModal(); } : undefined}
+              title={isLoggedIn ? "Upgrade to see supplier branding" : "Register to see supplier branding"}
+              className="mt-0.5"
+            />
+          )}
           <div className="flex-1 min-w-0">
-            <a href={`/supplier/${supplier.id}`} className="group/name">
-              <h3 className="text-sm font-bold text-slate-800 group-hover/name:text-orange-600 transition-colors line-clamp-2 leading-snug">
-                {supplier.name}
+            {supplier.isVerified && (
+              <div className="mb-1.5">
+                <VerifiedBadge size={8} className="text-[9px] px-1.5 py-px" />
+              </div>
+            )}
+            <a href="/supplier" className="group/name">
+              <h3 className="text-[15px] font-bold text-slate-800 group-hover/name:text-orange-600 transition-colors line-clamp-2 leading-snug">
+                {displayName}
               </h3>
             </a>
           </div>
-          <div className={`flex items-center gap-1 shrink-0 transition-all ${faved || hidden ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-            <button onClick={() => setHidden(true)}
-              className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
-              <EyeOff size={12} className="text-slate-400" />
-            </button>
-            <button onClick={() => setFaved(!faved)}
-              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${faved ? "bg-red-500 shadow-sm hover:bg-red-600" : "bg-slate-100 hover:bg-slate-200"}`}>
-              <Heart size={12} className={faved ? "fill-white text-white" : "text-slate-400"} />
-            </button>
-          </div>
         </div>
+        {(supplier.supplierType?.length > 0 || supplier.productQualityTier?.length > 0) && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {supplier.supplierType?.map((st) => (
+              <span key={st} className="px-1.5 py-px text-[9px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-md">
+                {SUPPLIER_TYPE_LABELS[st] || st}
+              </span>
+            ))}
+            {supplier.productQualityTier?.map((qt) => (
+              <span key={qt} className="px-1.5 py-px text-[9px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-md">
+                {QUALITY_LABELS[qt] || qt}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span className="flex items-center gap-1 text-[11px] text-slate-500">
-            <FlagImg code={supplier.country} size={14} />
-            {supplier.countryName}
+          <span className="flex items-center gap-1 text-xs text-slate-500">
+            <FlagImg code={supplier.address.countryCode} size={14} />
+            {supplier.address.country}
           </span>
-          <span className="text-slate-300">&middot;</span>
-          <StarRating rating={supplier.rating} size={10} showValue />
           <span className="text-slate-300">&middot;</span>
           <span className="flex items-center gap-1 text-[10px] text-slate-400">
             <Calendar size={10} />
             {supplier.yearsActive} yrs
           </span>
           <span className="text-slate-300">&middot;</span>
-          <span className="flex items-center gap-1 text-[10px] text-slate-400">
-            <Clock size={10} />
-            {supplier.openingHours}
-          </span>
-          {supplier.verified && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded">
-              <BadgeCheck size={9} />
-              Verified
-            </span>
-          )}
+          <a href="/supplier?tab=reviews" className="hover:opacity-80 transition-opacity">
+            <StarRating rating={supplier.rating} size={10} showValue />
+          </a>
+          {/* Hide + Favourite — appear on hover, right of rating */}
+          <div className={`flex items-center gap-1 ml-auto shrink-0 transition-all ${faved || hidden ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+            <button onClick={() => isLoggedIn ? setHidden(true) : openRegisterModal()}
+              className="w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+              <EyeOff size={11} className="text-slate-400" />
+            </button>
+            <button onClick={() => isLoggedIn ? setFaved(!faved) : openRegisterModal()}
+              className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${faved ? "bg-red-500 shadow-sm hover:bg-red-600" : "bg-slate-100 hover:bg-slate-200"}`}>
+              <Heart size={11} className={faved ? "fill-white text-white" : "text-slate-400"} />
+            </button>
+          </div>
         </div>
+        {/* Supply model tags */}
+        {supplier.supplyModels?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {supplier.supplyModels.map((f) => (
+              <span key={f} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-md">
+                <CheckCircle2 size={9} className="text-emerald-500 shrink-0" />
+                {SUPPLY_MODEL_LABELS[f] || f}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* CTA buttons */}
         <div className="flex gap-2 mt-3">
-          <button className="flex-1 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center gap-1">
-            <Phone size={11} />
-            Call Now
-          </button>
-          <button onClick={() => onContact?.(supplier)} className="flex-1 py-2 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm">
-            <MessageSquare size={11} />
-            Send Enquiry
-          </button>
+          {canContact ? (
+            <button onClick={() => onCallNow?.(supplier)} className="flex-1 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center justify-center gap-1 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+              <Phone size={11} /> Call Now
+            </button>
+          ) : isLoggedIn ? (
+            <a href="/pricing" className="flex-1 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center justify-center gap-1 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+              <Lock size={11} /> Call Now
+            </a>
+          ) : (
+            <button onClick={openRegisterModal} className="flex-1 py-2 text-sm font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 flex items-center justify-center gap-1 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+              <Phone size={11} /> Call Now
+            </button>
+          )}
+          {canContact ? (
+            <button onClick={() => onContact?.(supplier)} className="flex-1 py-2 text-sm font-semibold text-white bg-[#1e5299] hover:bg-[#174280] rounded-lg flex items-center justify-center gap-1 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+              <MessageSquare size={11} />
+              Send Enquiry
+            </button>
+          ) : isLoggedIn ? (
+            <a href="/pricing" className="flex-1 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg flex items-center justify-center gap-1 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+              <Lock size={11} />
+              Send Enquiry
+            </a>
+          ) : (
+            <button onClick={openRegisterModal} className="flex-1 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg flex items-center justify-center gap-1 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+              <MessageSquare size={11} />
+              Send Enquiry
+            </button>
+          )}
         </div>
       </div>
 
@@ -880,12 +1414,12 @@ function SupplierGridCard({ supplier, isPremium = false, isLoggedIn = false, onC
         {/* Category tags */}
         <div className="flex flex-wrap gap-1 mb-3">
           {supplier.categories.slice(0, 2).map((cat) => (
-            <a key={cat} href="#" className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-white border border-emerald-300 rounded-full hover:bg-emerald-50 transition-colors">
+            <a key={cat} href={`/suppliers?any=${encodeURIComponent(cat)}`} className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-white border border-emerald-300 rounded-md hover:bg-emerald-50 transition-colors">
               {cat}
             </a>
           ))}
           {supplier.categories.length > 2 && (
-            <span className="px-2 py-0.5 text-[10px] text-slate-400 bg-slate-50 border border-slate-200 rounded-full">
+            <span className="px-2 py-0.5 text-[10px] text-slate-400 bg-slate-50 border border-slate-200 rounded-md">
               +{supplier.categories.length - 2}
             </span>
           )}
@@ -895,87 +1429,70 @@ function SupplierGridCard({ supplier, isPremium = false, isLoggedIn = false, onC
         <div className="mb-3">
           <h4 className="text-sm font-bold text-slate-800 mb-2">Description</h4>
           <div
-            className="text-xs text-slate-600 leading-relaxed overflow-y-auto custom-scrollbar"
+            className="text-xs text-slate-600 leading-relaxed overflow-y-auto custom-scrollbar whitespace-pre-line"
             style={{ height: "10.5em" }}
           >
-            <HighlightedText text={supplier.description} keyword={keyword} />
+            <HighlightedText text={supplier.companyDescription.replace(/\n\n+/g, "\n")} keyword={keyword} />
+            {supplier.productsOffered && (
+              <p className="mt-2"><HighlightedText text={supplier.productsOffered} keyword={keyword} /></p>
+            )}
+            {supplier.brandsDistributed?.length > 0 && (
+              <p className="mt-2"><HighlightedText text={supplier.brandsDistributed.join(", ")} keyword={keyword} /></p>
+            )}
           </div>
         </div>
 
-        {/* Focus tags */}
-        <div className="flex flex-wrap gap-1 mb-3">
-          {supplier.focus.map((f) => (
-            <span key={f} className="px-2 py-0.5 text-[10px] font-semibold text-orange-600 bg-orange-50 rounded border border-orange-100">
-              {f}
-            </span>
-          ))}
-        </div>
-
-        {/* Contact & Address footer */}
-        <div className="relative mt-auto">
-          <div className="flex gap-3 pl-2.5 pr-3 py-3 bg-slate-50 rounded-lg">
-            {/* Address — bottom left */}
-            <div className="flex-1 min-w-0 max-w-[45%]">
-              <div className="flex items-start gap-1.5 text-xs">
-                <MapPin size={11} className="text-slate-400 shrink-0 mt-0.5" />
-                {isPremium ? (
-                  <span className="text-slate-600 leading-relaxed">{supplier.address}</span>
-                ) : (
-                  <BlurredText text={supplier.address} isPremium={false} className="text-slate-500 leading-relaxed" />
+        {/* Contact & Address footer — mini business card */}
+        <div className="mt-auto">
+          {canContact ? (
+            <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+              {/* Mini header — contact person */}
+              <div className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-slate-50 flex items-center gap-2">
+                <div className="w-5.5 h-5.5 w-[22px] h-[22px] rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                  <span className="text-[9px] font-bold text-white">
+                    {supplier.contact.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "?"}
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 truncate">{supplier.contact.name}</span>
+                {supplier.contact.roleInCompany && (
+                  <span className="text-[10px] text-slate-400 truncate hidden sm:inline">&middot; {supplier.contact.roleInCompany}</span>
                 )}
+              </div>
+              {/* Contact rows */}
+              <div className="px-3 py-2 space-y-1 text-[11px] bg-white">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Phone size={10} className="text-slate-400 shrink-0" />
+                    <span className="text-slate-600 truncate">{supplier.contact.mobileNumber}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Globe size={10} className="text-slate-400" />
+                    <WebsiteLink slug={supplier.slug} url={"https://" + supplier.companyWebsite} className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                      Website <ExternalLink size={9} />
+                    </WebsiteLink>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <MapPin size={10} className="text-slate-400 shrink-0" />
+                  <span className="text-slate-500 truncate">{[supplier.address.street, supplier.address.postalCode, supplier.address.city].filter(Boolean).join(", ")}</span>
+                </div>
               </div>
             </div>
-            {/* Phone / Contact / Website — bottom right */}
-            <div className="shrink-0 ml-auto space-y-1.5 flex flex-col items-end">
-              <div className="flex items-center gap-1.5 text-xs">
-                <Phone size={10} className="text-slate-400" />
-                <BlurredText text={supplier.phone} isPremium={isPremium} className="text-slate-600" />
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <Mail size={10} className="text-slate-400" />
-                {isPremium ? (
-                  <button onClick={() => onContact?.(supplier)} className="text-orange-600 hover:text-orange-700 font-medium transition-colors">
-                    Contact Supplier
-                  </button>
-                ) : (
-                  <BlurredText text={supplier.email} isPremium={false} className="text-slate-500" />
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <Globe size={10} className="text-slate-400" />
-                {isPremium ? (
-                  <a href="#" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-                    Visit Website <ExternalLink size={9} />
-                  </a>
-                ) : (
-                  <BlurredText text={supplier.website} isPremium={false} className="text-slate-500" />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Tier overlay for non-premium */}
-          {!isPremium && (
-            <div className="absolute inset-0 flex items-center justify-end bg-slate-50/80 backdrop-blur-[3px] rounded-lg">
-              <div className="text-right pr-4">
-                {isLoggedIn ? (
-                  <>
-                    <span className="text-xs text-slate-500 font-medium block mb-1.5">Upgrade to see supplier details</span>
-                    <a href="/pricing" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg shadow-sm hover:bg-orange-600 transition-all">
-                      <Lock size={11} />
-                      Upgrade Now
-                    </a>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xs text-slate-500 font-medium block mb-1.5">Join to access supplier details</span>
-                    <a href="/register" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg shadow-sm hover:bg-orange-600 transition-all">
-                      <Lock size={11} />
-                      Join Now!
-                    </a>
-                  </>
-                )}
-              </div>
+          ) : (
+            <div className="rounded-lg bg-slate-50 py-4 text-center">
+              <Lock size={16} className="text-slate-300 mx-auto mb-1.5" />
+              <p className="text-[11px] text-slate-400 mb-2.5">
+                {isLoggedIn ? "Contact details available to Premium members" : "Contact details available to registered members"}
+              </p>
+              {isLoggedIn ? (
+                <a href="/pricing" className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                  <Rocket size={12} /> Upgrade Now
+                </a>
+              ) : (
+                <button onClick={openRegisterModal} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-orange-500 rounded-lg hover:bg-orange-600 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
+                  <Lock size={12} /> Log In / Register
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -987,29 +1504,28 @@ function SupplierGridCard({ supplier, isPremium = false, isLoggedIn = false, onC
 /* ═══════════════════════════════════════════════════
    2. SUPPLIER CONTACT PANEL — right sidebar on deal/supplier pages
    ═══════════════════════════════════════════════════ */
-function SupplierContactPanel({ supplier, isPremium = false }) {
+function SupplierContactPanel({ supplier, isPremium = false, isLoggedIn = false }) {
+  const canContact = isPremium || (isLoggedIn && supplier.isSupplierPro);
+  const canViewBranding = isLoggedIn && (supplier.isSupplierPro || isPremium);
+  const displayName = canViewBranding && supplier.companyName ? supplier.companyName : getAnonymousName(supplier);
+  const openRegisterModal = () => window.dispatchEvent(new CustomEvent("open-auth-modal", { detail: { tab: "register" } }));
   const now = new Date();
   const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
   const currentDay = now.getDay();
-  const isOpenToday = supplier.openDays[currentDay];
+  const isOpenToday = getOpenDays(supplier.businessHours)[currentDay];
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
       <div className="px-5 pt-5 pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2 mb-2">
-          {supplier.verified && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-md">
-              <BadgeCheck size={10} />
-              Verified Seller
-            </span>
-          )}
+          {supplier.isVerified && <VerifiedBadge />}
         </div>
-        <h3 className="text-sm font-bold text-slate-900">{supplier.name}</h3>
+        <h3 className="text-sm font-bold text-slate-900">{displayName}</h3>
         {/* Category Tags */}
         <div className="flex flex-wrap gap-1.5 mt-2.5">
           {supplier.categories.slice(0, 3).map((cat) => (
-            <a key={cat} href="#" className="px-2 py-1 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-md transition-colors">
+            <a key={cat} href={`/suppliers?any=${encodeURIComponent(cat)}`} className="px-2 py-1 text-[10px] font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-md transition-colors">
               {cat}
             </a>
           ))}
@@ -1028,29 +1544,29 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Country:</span>
             <span className="flex items-center gap-1.5 text-slate-700 font-medium">
-              <FlagImg code={supplier.country} size={14} /> {supplier.countryName}
+              <FlagImg code={supplier.address.countryCode} size={14} /> {supplier.address.country}
             </span>
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">City:</span>
-            <BlurredText text={supplier.city} isPremium={isPremium} className="text-slate-700 font-medium" />
+            <BlurredText text={supplier.address.city} isPremium={canContact} className="text-slate-700 font-medium" />
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Postal Code:</span>
-            <BlurredText text={supplier.zip} isPremium={isPremium} className="text-slate-700 font-medium" />
+            <BlurredText text={supplier.address.postalCode} isPremium={canContact} className="text-slate-700 font-medium" />
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Street:</span>
-            <BlurredText text={supplier.address.split(",")[0]} isPremium={isPremium} className="text-slate-700 font-medium" />
+            <BlurredText text={supplier.address.street} isPremium={canContact} className="text-slate-700 font-medium" />
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Website:</span>
-            {isPremium ? (
-              <a href="#" className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
-                {supplier.website} <ExternalLink size={10} />
-              </a>
+            {canContact ? (
+              <WebsiteLink slug={supplier.slug} url={"https://" + supplier.companyWebsite} className="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                {supplier.companyWebsite} <ExternalLink size={10} />
+              </WebsiteLink>
             ) : (
-              <BlurredText text={supplier.website} isPremium={false} className="text-slate-700 font-medium" />
+              <BlurredText text={supplier.companyWebsite} isPremium={canContact} className="text-slate-700 font-medium" />
             )}
           </div>
         </div>
@@ -1062,18 +1578,18 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
         <div className="space-y-2.5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Contact Name:</span>
-            <BlurredText text={supplier.contactName} isPremium={isPremium} className="text-slate-700 font-medium" />
+            <BlurredText text={supplier.contact.name} isPremium={canContact} className="text-slate-700 font-medium" />
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Position:</span>
-            <BlurredText text={supplier.contactPosition} isPremium={isPremium} className="text-slate-700 font-medium" />
+            <BlurredText text={supplier.contact.roleInCompany} isPremium={canContact} className="text-slate-700 font-medium" />
           </div>
           <div className="flex items-center justify-between text-xs">
             <span className="text-slate-500">Phone Number:</span>
-            <BlurredText text={supplier.phone} isPremium={isPremium} className="text-slate-700 font-medium" />
+            <BlurredText text={supplier.contact.mobileNumber} isPremium={canContact} className="text-slate-700 font-medium" />
           </div>
         </div>
-        {!isPremium && (
+        {!canContact && (
           <button className="w-full mt-3 px-3 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center gap-1.5">
             <Eye size={12} />
             Show Details
@@ -1084,17 +1600,17 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
       {/* Opening Hours */}
       <div className="px-5 py-4 border-b border-slate-100">
         <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Opening hours</h4>
-        <p className="text-sm font-semibold text-slate-800 mb-3">{supplier.openingHours}</p>
+        <p className="text-sm font-semibold text-slate-800 mb-3">{getOpeningHours(supplier.businessHours)}</p>
         <div className="flex items-center gap-1.5">
           {DAY_LABELS.map((day, i) => (
             <div
               key={day}
               className={`flex-1 text-center py-1.5 rounded-lg text-[10px] font-bold transition-all ${
                 i === currentDay
-                  ? supplier.openDays[i]
+                  ? getOpenDays(supplier.businessHours)[i]
                     ? "bg-emerald-500 text-white shadow-sm ring-2 ring-emerald-200"
                     : "bg-red-500 text-white shadow-sm ring-2 ring-red-200"
-                  : supplier.openDays[i]
+                  : getOpenDays(supplier.businessHours)[i]
                   ? "bg-emerald-50 text-emerald-700"
                   : "bg-slate-100 text-slate-400"
               }`}
@@ -1111,29 +1627,37 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
 
       {/* CTA Buttons */}
       <div className="px-5 py-4 space-y-2">
-        {isPremium ? (
+        {canContact ? (
           <>
-            <button className="w-full py-2.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1.5">
+            <button className="w-full py-2.5 text-sm font-bold text-white bg-[#1e5299] hover:bg-[#174280] rounded-lg flex items-center justify-center gap-1.5 shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200">
               <Send size={13} />
               Send Enquiry
             </button>
             <div className="flex gap-2">
-              <a href={`/supplier/${supplier.id}`} className="flex-1 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors text-center">
+              <a href={"/supplier"} className="flex-1 py-2 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors text-center">
                 View Profile
               </a>
-              <a href="#" className="flex-1 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-center">
+              <a href={"/supplier"} className="flex-1 py-2 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-center">
                 View All Deals
               </a>
             </div>
           </>
-        ) : (
+        ) : isLoggedIn ? (
           <a
             href="/pricing"
-            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all shadow-sm"
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200"
+          >
+            <Rocket size={14} />
+            Upgrade Now
+          </a>
+        ) : (
+          <button
+            onClick={openRegisterModal}
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)] active:scale-95 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)] transition-all duration-200"
           >
             <Lock size={14} />
-            Join Now
-          </a>
+            Join Now!
+          </button>
         )}
       </div>
     </div>
@@ -1143,8 +1667,10 @@ function SupplierContactPanel({ supplier, isPremium = false }) {
 /* ═══════════════════════════════════════════════════
    3. SUPPLIER PROFILE PAGE — single-supplier.html
    ═══════════════════════════════════════════════════ */
-function SupplierProfilePage({ supplier, isPremium = false }) {
+function SupplierProfilePage({ supplier, isPremium = false, isPremiumPlus = false, isLoggedIn = false }) {
   const [activeTab, setActiveTab] = useState("about");
+  // Review tab is Premium+-only (not Premium). isPremiumPlus = premium-plus | supplier-premium.
+  const canAccessReviews = isLoggedIn && isPremiumPlus;
 
   return (
     <div className="flex gap-6 items-start">
@@ -1153,16 +1679,11 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
         {/* Header Card */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="bg-gradient-to-b from-slate-50 to-white px-6 py-5 border-b border-slate-100">
-            <h1 className="text-xl font-extrabold text-slate-800">{supplier.name}</h1>
+            <h1 className="text-xl font-extrabold text-slate-800">{supplier.companyName}</h1>
             <div className="flex items-center gap-3 mt-2 flex-wrap">
-              {supplier.verified && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-md">
-                  <BadgeCheck size={10} />
-                  Verified Seller
-                </span>
-              )}
+              {supplier.isVerified && <VerifiedBadge />}
               <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                <FlagImg code={supplier.country} size={16} /> {supplier.countryName}
+                <FlagImg code={supplier.address.countryCode} size={16} /> {supplier.address.country}
               </span>
               <span className="flex items-center gap-1.5 text-xs text-slate-400">
                 <Calendar size={11} />
@@ -1200,7 +1721,7 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
               <div className="space-y-6">
                 {/* Description */}
                 <div>
-                  <p className="text-sm text-slate-600 leading-relaxed">{supplier.description}</p>
+                  <p className="text-sm text-slate-600 leading-relaxed">{supplier.companyDescription}</p>
                 </div>
 
                 {/* Products Distributed */}
@@ -1209,7 +1730,15 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                     <Package size={13} className="text-orange-500" />
                     Products Distributed by This Supplier
                   </h3>
-                  <p className="text-sm text-slate-600">{supplier.products}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(Array.isArray(supplier.productsOffered) ? supplier.productsOffered : [supplier.productsOffered])
+                      .flatMap(p => p.split(",").map(s => s.trim())).filter(Boolean)
+                      .map((item) => (
+                        <a key={item} href={`/suppliers?any=${encodeURIComponent(item)}`} className="inline-flex items-center px-2 py-1 text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-md hover:bg-sky-100 hover:border-sky-300 transition-colors cursor-pointer">
+                          {item}
+                        </a>
+                      ))}
+                  </div>
                 </div>
 
                 {/* Brands */}
@@ -1218,9 +1747,9 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                     <Tag size={13} className="text-orange-500" />
                     Brands Distributed by This Supplier
                   </h3>
-                  {supplier.brands.length > 0 ? (
+                  {supplier.brandsDistributed.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {supplier.brands.map((brand) => (
+                      {supplier.brandsDistributed.map((brand) => (
                         <span key={brand} className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg">
                           {brand}
                         </span>
@@ -1237,10 +1766,11 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
                     <Sparkles size={13} className="text-orange-500" />
                     Focus
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {supplier.focus.map((f) => (
-                      <span key={f} className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 rounded-lg border border-orange-100">
-                        {f}
+                  <div className="flex flex-wrap gap-1.5">
+                    {supplier.supplyModels.map((f) => (
+                      <span key={f} className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-md">
+                        <CheckCircle2 size={10} className="text-emerald-500 shrink-0" />
+                        {SUPPLY_MODEL_LABELS[f] || f}
                       </span>
                     ))}
                   </div>
@@ -1249,51 +1779,100 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
             )}
 
             {activeTab === "reviews" && (
-              <div>
-                {/* Rating Summary */}
-                <div className="flex items-center gap-4 mb-6 pb-5 border-b border-slate-100">
-                  <div className="text-center">
-                    <p className="text-3xl font-extrabold text-slate-900">{supplier.rating.toFixed(1)}</p>
-                    <StarRating rating={supplier.rating} size={14} />
-                    <p className="text-xs text-slate-400 mt-1">({supplier.reviewCount} reviews)</p>
-                  </div>
-                  <div className="flex-1">
-                    {[5, 4, 3, 2, 1].map((stars) => {
-                      const count = stars === 5 ? 15 : stars === 4 ? 6 : stars === 3 ? 2 : stars === 2 ? 1 : 0;
-                      const pct = (count / supplier.reviewCount) * 100;
-                      return (
-                        <div key={stars} className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-slate-500 w-3 text-right">{stars}</span>
-                          <Star size={10} className="fill-amber-400 text-amber-400" />
-                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+              canAccessReviews ? (
+                <div>
+                  {/* Rating Summary */}
+                  <div className="flex items-center gap-4 mb-6 pb-5 border-b border-slate-100">
+                    <div className="text-center">
+                      <p className="text-3xl font-extrabold text-slate-900">{supplier.rating.toFixed(1)}</p>
+                      <StarRating rating={supplier.rating} size={14} />
+                      <p className="text-xs text-slate-400 mt-1">({supplier.reviewCount} reviews)</p>
+                    </div>
+                    <div className="flex-1">
+                      {[5, 4, 3, 2, 1].map((stars) => {
+                        const count = stars === 5 ? 15 : stars === 4 ? 6 : stars === 3 ? 2 : stars === 2 ? 1 : 0;
+                        const pct = (count / supplier.reviewCount) * 100;
+                        return (
+                          <div key={stars} className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-slate-500 w-3 text-right">{stars}</span>
+                            <Star size={10} className="fill-amber-400 text-amber-400" />
+                            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-[10px] text-slate-400 w-5 text-right">{count}</span>
                           </div>
-                          <span className="text-[10px] text-slate-400 w-5 text-right">{count}</span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Review List */}
+                  <div className="space-y-4">
+                    {REVIEWS.map((review) => (
+                      <div key={review.id} className="flex gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                          {review.initial}
                         </div>
-                      );
-                    })}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-slate-800">{review.author}</span>
+                            <span className="text-xs text-slate-400">{review.date}</span>
+                          </div>
+                          <StarRating rating={review.rating} size={10} />
+                          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">{review.text}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                {/* Review List */}
-                <div className="space-y-4">
-                  {REVIEWS.map((review) => (
-                    <div key={review.id} className="flex gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                        {review.initial}
+              ) : (
+                /* ── GATED STATE — PLACEHOLDER DATA ONLY ──
+                   Blurred placeholder + lock overlay, matching supplier.jsx pattern.
+                   Real review data is never rendered when gated. */
+                <div className="relative overflow-hidden min-h-[280px]">
+                  <div className="select-none pointer-events-none" style={{ filter: "blur(8px)", opacity: 0.35 }}>
+                    <div className="flex items-center gap-4 mb-6 pb-5 border-b border-slate-100">
+                      <div className="text-center">
+                        <span className="text-3xl font-extrabold text-slate-900">4.2</span>
+                        <p className="text-xs text-slate-400 mt-0.5">out of 5</p>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-sm font-semibold text-slate-800">{review.author}</span>
-                          <span className="text-xs text-slate-400">{review.date}</span>
-                        </div>
-                        <StarRating rating={review.rating} size={10} />
-                        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">{review.text}</p>
+                      <div>
+                        <StarRating rating={4.2} size={14} />
+                        <p className="text-sm text-slate-500 mt-1">Based on 12 sources</p>
                       </div>
                     </div>
-                  ))}
+                    <div className="space-y-3">
+                      {["Product Quality", "Delivery Speed", "Communication", "Value for Money"].map((label) => (
+                        <div key={label} className="flex items-center gap-3">
+                          <span className="text-sm text-slate-600 w-44 shrink-0">{label}</span>
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-amber-400 rounded-full" style={{ width: "75%" }} />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700 w-8 text-right">3.8</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="flex flex-col items-center px-6 py-5 rounded-xl bg-white/90 border border-slate-200 shadow-sm max-w-xs">
+                      <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center mb-2.5">
+                        <Lock size={18} className="text-orange-500" />
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3 text-center">
+                        {isLoggedIn
+                          ? "Supplier reputation and review data are available on Premium+ plans."
+                          : "Supplier reputation and review data are available to registered members."}
+                      </p>
+                      <a
+                        href={isLoggedIn ? "/pricing" : "/register"}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 shadow-sm transition-all"
+                      >
+                        {isLoggedIn ? <><Rocket size={12} /> View Plans</> : <><Lock size={12} /> Log In / Register</>}
+                      </a>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )
             )}
           </div>
         </div>
@@ -1301,7 +1880,7 @@ function SupplierProfilePage({ supplier, isPremium = false }) {
 
       {/* Right Sidebar — Contact Panel */}
       <div className="w-80 shrink-0 hidden lg:block">
-        <SupplierContactPanel supplier={supplier} isPremium={isPremium} />
+        <SupplierContactPanel supplier={supplier} isPremium={isPremium} isLoggedIn={isLoggedIn} />
       </div>
     </div>
   );
@@ -1324,13 +1903,13 @@ function SupplierSearchBar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const categories = ["All Categories", "Baby Products", "Clothing", "Computing", "Consumer Electronic", "Health & Beauty", "Home & Garden", "Jewellery & Watches", "Mobile & Home Phones", "Office & Business", "Sports & Fitness", "Surplus & Stocklots", "Toys & Games"];
+  const categories = ["All Categories", "Baby Products", "Clothing", "Computing", "Consumer Electronics", "Health & Beauty", "Home & Garden", "Jewellery & Watches", "Mobile & Home Phones", "Office & Business", "Sports & Fitness", "Surplus & Stocklots", "Toys & Games"];
 
   return (
     <div className="flex items-center w-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
       <div ref={catRef} className="relative shrink-0 border-r border-slate-200">
         <button onClick={() => setCatOpen(!catOpen)}
-          className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+          className="flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)]">
           {category}
           <ChevronDown size={14} className={`text-slate-400 transition-transform ${catOpen ? "rotate-180" : ""}`} />
         </button>
@@ -1348,7 +1927,7 @@ function SupplierSearchBar() {
       <input
         type="text"
         placeholder="Search suppliers by name, product, brand..."
-        className="flex-1 px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none min-w-0"
+        className="flex-1 px-4 py-3 text-base text-slate-800 placeholder-slate-400 focus:outline-none min-w-0 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
       />
       <button className="px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white transition-colors flex items-center gap-1.5 shrink-0">
         <Search size={16} />
@@ -1361,32 +1940,15 @@ function SupplierSearchBar() {
 /* ═══════════════════════════════════════════════════
    MAIN — Suppliers Page
    ═══════════════════════════════════════════════════ */
-/* ═══════════════════════════════════════════════════
-   BREADCRUMB
-   ═══════════════════════════════════════════════════ */
-function Breadcrumb({ items }) {
-  return (
-    <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-4">
-      {items.map((item, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <ChevronRight size={10} />}
-          {item.href ? (
-            <a href={item.href} className="hover:text-orange-500 transition-colors">{item.label}</a>
-          ) : (
-            <span className="text-slate-600 font-medium">{item.label}</span>
-          )}
-        </span>
-      ))}
-    </nav>
-  );
-}
-
 function FollowButton() {
+  const { isLoggedIn } = useDemoAuth();
   const [faved, setFaved] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState(null);
+  const openRegisterModal = () => window.dispatchEvent(new CustomEvent("open-auth-modal", { detail: { tab: "register" } }));
 
   const handleFav = () => {
+    if (!isLoggedIn) { openRegisterModal(); return; }
     if (faved) {
       setFaved(false);
       setSubscribed(false);
@@ -1396,6 +1958,7 @@ function FollowButton() {
   };
 
   const handleSub = () => {
+    if (!isLoggedIn) { openRegisterModal(); return; }
     setSubscribed(!subscribed);
   };
 
@@ -1488,7 +2051,7 @@ function RelatedSearches() {
       <h3 className="text-lg font-extrabold text-slate-900 text-center mb-4">Related Searches</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {SUPPLIER_RELATED_SEARCHES.map((term) => (
-          <a key={term} href="#" className="px-3 py-2 text-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg border border-slate-100 transition-colors text-center">
+          <a key={term} href={`/suppliers?any=${encodeURIComponent(term)}`} className="px-3 py-2 text-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg border border-slate-100 transition-colors text-center">
             {term}
           </a>
         ))}
@@ -1501,6 +2064,7 @@ function RelatedSearches() {
    TRUST / STATS SECTION
    ═══════════════════════════════════════════════════ */
 function TrustSection() {
+  /* PRODUCTION (H2): Fetch stats from GET /api/stats, testimonials from GET /api/testimonials */
   const stats = [
     { label: "Average markup at wholesale prices", value: "366.61%", color: "text-orange-600" },
     { label: "Live Deals", value: "14,891+", color: "text-orange-600" },
@@ -1508,18 +2072,18 @@ function TrustSection() {
   ];
 
   const testimonials = [
-    { name: "Rachel Harvey", location: "United Kingdom", text: "I am very pleased that I have subscribed to WholesaleDeals as the quality and service is excellent. The information you provide is very detailed and helpful.", rating: 5 },
-    { name: "Thai Hoang Do", location: "Belgium", text: "Hello. Very pleased with the service, suppliers and dropshippers. I have just signed up to another full term for the next 6 months. Thank you.", rating: 5 },
-    { name: "Alice Elliott", location: "United Kingdom", text: "Absolutely fantastic, it's a great service and has a really good layout. It's very convenient and it is updated very regularly.", rating: 5 },
-    { name: "Marcus Chen", location: "Germany", text: "Great platform for sourcing wholesale products. The markup percentages are clearly displayed which helps me calculate profit margins instantly.", rating: 5 },
-    { name: "Sofia Rodriguez", location: "Spain", text: "I've been using WholesaleUp for dropshipping and it's been a game changer. The supplier verification gives me confidence in every order.", rating: 5 },
-    { name: "James Patterson", location: "Ireland", text: "Excellent variety of deals across multiple categories. The filters make it easy to find exactly what I need for my eBay store.", rating: 5 },
-    { name: "Anna Kowalski", location: "Poland", text: "Very professional platform. I found reliable suppliers within my first week and have been ordering consistently ever since.", rating: 4 },
-    { name: "David Moore", location: "United Kingdom", text: "The daily deal updates keep me ahead of the competition. I've tripled my Amazon sales since joining six months ago.", rating: 5 },
-    { name: "Marie Dupont", location: "France", text: "Simple to use and very effective. The price comparison with Amazon and eBay is incredibly useful for making quick sourcing decisions.", rating: 5 },
-    { name: "Luca Bianchi", location: "Italy", text: "Signed up as a free member first, then upgraded after seeing the quality of deals. Best investment I've made for my online business.", rating: 5 },
-    { name: "Emma van Dijk", location: "Netherlands", text: "The dropship deals are particularly good. No need to hold inventory and the margins are better than I expected.", rating: 4 },
-    { name: "Oliver Schmidt", location: "Germany", text: "Customer support is responsive and the platform is constantly improving. New deals are added daily which keeps things fresh.", rating: 5 },
+    { name: "Rachel Harvey", role: "Online Retailer", location: "United Kingdom", text: "I am very pleased that I have subscribed to WholesaleUp as the quality and service is excellent. The information you provide is very detailed and helpful.", rating: 5 },
+    { name: "Thai Hoang Do", role: "Dropshipper", location: "Belgium", text: "Hello. Very pleased with the service, suppliers and dropshippers. I have just signed up to another full term for the next 6 months. Thank you.", rating: 5 },
+    { name: "Alice Elliott", role: "Online Reseller", location: "United Kingdom", text: "Absolutely fantastic, it's a great service and has a really good layout. It's very convenient and it is updated very regularly.", rating: 5 },
+    { name: "Marcus Chen", role: "Wholesale Buyer", location: "Germany", text: "Great platform for sourcing wholesale products. The markup percentages are clearly displayed which helps me calculate profit margins instantly.", rating: 5 },
+    { name: "Sofia Rodriguez", role: "Dropshipper", location: "Spain", text: "I've been using WholesaleUp for dropshipping and it's been a game changer. The supplier verification gives me confidence in every order.", rating: 5 },
+    { name: "James Patterson", role: "eBay Seller", location: "Ireland", text: "Excellent variety of deals across multiple categories. The filters make it easy to find exactly what I need for my eBay store.", rating: 5 },
+    { name: "Anna Kowalski", role: "Online Reseller", location: "Poland", text: "Very professional platform. I found reliable suppliers within my first week and have been ordering consistently ever since.", rating: 4 },
+    { name: "David Moore", role: "Amazon Seller", location: "United Kingdom", text: "The daily deal updates keep me ahead of the competition. I've tripled my Amazon sales since joining six months ago.", rating: 5 },
+    { name: "Marie Dupont", role: "Wholesale Buyer", location: "France", text: "Simple to use and very effective. The price comparison with Amazon and eBay is incredibly useful for making quick sourcing decisions.", rating: 5 },
+    { name: "Luca Bianchi", role: "Online Retailer", location: "Italy", text: "Signed up as a free member first, then upgraded after seeing the quality of deals. Best investment I've made for my online business.", rating: 5 },
+    { name: "Emma van Dijk", role: "Dropshipper", location: "Netherlands", text: "The dropship deals are particularly good. No need to hold inventory and the margins are better than I expected.", rating: 4 },
+    { name: "Oliver Schmidt", role: "Online Reseller", location: "Germany", text: "Customer support is responsive and the platform is constantly improving. New deals are added daily which keeps things fresh.", rating: 5 },
   ];
 
   const scrollRef = useRef(null);
@@ -1565,14 +2129,14 @@ function TrustSection() {
                     <Star key={`e${i}`} size={12} className="text-slate-200" />
                   ))}
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed mb-3 line-clamp-3">&ldquo;{t.text}&rdquo;</p>
+                <p className="text-sm text-slate-600 leading-relaxed mb-3 line-clamp-3">&ldquo;{t.text}&rdquo;</p>
                 <div className="flex items-center gap-2.5 mt-auto pt-3 border-t border-slate-100">
                   <div className="w-8 h-8 rounded-full bg-amber-700 flex items-center justify-center text-white font-bold text-[10px] shrink-0">
                     {t.name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div>
                     <p className="text-xs font-bold text-slate-800">{t.name}</p>
-                    <p className="text-[11px] text-slate-400">— {t.location}</p>
+                    <p className="text-xs text-slate-400">{t.role} — {t.location}</p>
                   </div>
                 </div>
               </div>
@@ -1590,208 +2154,388 @@ function TrustSection() {
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   CTA BANNER
-   ═══════════════════════════════════════════════════ */
-function CtaBanner() {
-  return (
-    <div className="mt-12 bg-gradient-to-b from-orange-50/80 to-white rounded-2xl p-8 sm:p-12 relative overflow-hidden border border-orange-100">
-      {/* Left illustrations */}
-      <div className="absolute left-6 sm:left-12 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-8">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
-          <ellipse cx="52" cy="52" rx="28" ry="26" fill="#FED7AA" opacity="0.5" />
-          <rect x="25" y="42" width="50" height="38" rx="4" stroke="#1E293B" strokeWidth="2" fill="none" />
-          <path d="M38 42V32a12 12 0 0 1 24 0v10" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <circle cx="40" cy="52" r="2.5" fill="#1E293B" />
-          <circle cx="60" cy="52" r="2.5" fill="#1E293B" />
-        </svg>
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-16 h-16">
-          <ellipse cx="55" cy="48" rx="26" ry="24" fill="#FED7AA" opacity="0.5" />
-          <path d="M20 20h28l28 28-22 22L20 48V20z" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinejoin="round" />
-          <circle cx="34" cy="34" r="4" stroke="#1E293B" strokeWidth="2" fill="none" />
-          <path d="M48 52l6-6" stroke="#1E293B" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M42 58l6-6" stroke="#1E293B" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-18 h-18" style={{width: "4.5rem", height: "4.5rem"}}>
-          <ellipse cx="50" cy="52" rx="28" ry="26" fill="#FED7AA" opacity="0.5" />
-          <path d="M16 35l34-17 34 17v30L50 82 16 65V35z" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinejoin="round" />
-          <path d="M16 35l34 17 34-17" stroke="#1E293B" strokeWidth="2" fill="none" />
-          <path d="M50 52v30" stroke="#1E293B" strokeWidth="2" fill="none" />
-          <path d="M33 27l34 17" stroke="#1E293B" strokeWidth="1.5" fill="none" opacity="0.4" />
-        </svg>
-      </div>
+/* ─────────────────────────────────────────────────────────────
+   🔧 PRODUCTION SEO — ItemList JSON-LD (schema.org/ItemList):
+   When suppliers come from API, emit <script type="application/ld+json"> with:
+   {
+     "@context": "https://schema.org",
+     "@type": "ItemList",
+     "name": "Wholesale Suppliers",
+     "numberOfItems": totalCount,
+     "itemListElement": suppliers.map((s, i) => ({
+       "@type": "ListItem",
+       "position": i + 1 + (page - 1) * perPage,
+       "url": `https://wholesaleup.com/suppliers/${s.slug}`,
+       "item": {
+         "@type": "LocalBusiness",
+         "name": s.companyName || "Supplier",
+         "address": { "@type": "PostalAddress", "addressCountry": s.countryCode },
+         "aggregateRating": {
+           "@type": "AggregateRating",
+           "ratingValue": s.rating,
+           "reviewCount": s.reviewCount
+         }
+       }
+     }))
+   }
+   See SEO skill Section 5 & 12.3 for full guidance.
+   See pricing.jsx FAQSection for working JSON-LD pattern.
+   ─────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   🔧 PRODUCTION SEO — Pagination rel="next" / rel="prev":
+   When paginated API results are live, add <Head> links:
+     <link rel="prev" href="/suppliers?page={page-1}" />
+     <link rel="next" href="/suppliers?page={page+1}" />
+   Omit rel="prev" on page 1; omit rel="next" on last page.
+   Also update canonical: /suppliers?page=N for page > 1.
+   See SEO skill Section 12.2 for implementation checklist.
+   ─────────────────────────────────────────────────────────── */
+export default function Phase4Suppliers({ routeCategory = null, routeSubcategory = null, routeSupplierType = null }) {
+  /* ── Auth state from DemoAuthContext ───────────────────────
+     Supports both real NextAuth session AND demo dropdown overrides.
+     Premium gating controls supplier contact info visibility.
+     ─────────────────────────────────────────────────────────── */
+  const { isLoggedIn, isPremium, isPremiumPlus, canViewSupplier } = useDemoAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-      {/* Right illustrations */}
-      <div className="absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-8">
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-20">
-          <ellipse cx="42" cy="42" rx="28" ry="26" fill="#FED7AA" opacity="0.5" />
-          <circle cx="42" cy="42" r="20" stroke="#1E293B" strokeWidth="2" fill="none" />
-          <path d="M56 56l22 22" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" />
-          <path d="M32 36a12 12 0 0 1 12-9" stroke="#1E293B" strokeWidth="1.5" strokeLinecap="round" fill="none" opacity="0.5" />
-        </svg>
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-16 h-16">
-          <ellipse cx="55" cy="50" rx="28" ry="26" fill="#FED7AA" opacity="0.5" />
-          <path d="M18 78h64" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" />
-          <path d="M18 78V22" stroke="#1E293B" strokeWidth="2" strokeLinecap="round" />
-          <path d="M26 64l14-12 12 6 14-20 14-12" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="80" cy="26" r="4" stroke="#1E293B" strokeWidth="2" fill="none" />
-          <circle cx="80" cy="26" r="1.5" fill="#1E293B" />
-        </svg>
-        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-18 h-18" style={{width: "4.5rem", height: "4.5rem"}}>
-          <ellipse cx="50" cy="50" rx="28" ry="26" fill="#FED7AA" opacity="0.5" />
-          <path d="M18 50l14-14 10 4 8-8" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M50 32l10 10 4-10 18 18" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M32 54l8 8 12-6 8 8" stroke="#1E293B" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="28" cy="50" r="3" fill="#1E293B" opacity="0.15" />
-          <circle cx="72" cy="50" r="3" fill="#1E293B" opacity="0.15" />
-        </svg>
-      </div>
+  /* ── Read initial filter state from URL search params ── */
+  const initialCategory = routeCategory || null;
+  // Convert clean subcategory slug from route to composite filter ID (parentId--subId)
+  const initialSubcategory = routeSubcategory && routeCategory ? `${routeCategory}--${routeSubcategory}` : null;
+  /* Parse per-mode keyword params: ?any=nike,adidas&exact=dark+blue&all=long,laces
+     Also supports legacy ?keywords= for backwards compatibility */
+  const initialKeywords = (() => {
+    const kws = [];
+    const anyTerms = searchParams.get("any");
+    const allTerms = searchParams.get("all");
+    const exactTerms = searchParams.get("exact");
+    const legacyTerms = searchParams.get("keywords");
+    if (anyTerms) anyTerms.split(",").filter(Boolean).forEach((t) => kws.push({ term: t, mode: "any" }));
+    if (allTerms) allTerms.split(",").filter(Boolean).forEach((t) => kws.push({ term: t, mode: "all" }));
+    if (exactTerms) exactTerms.split(",").filter(Boolean).forEach((t) => kws.push({ term: t, mode: "exact" }));
+    if (legacyTerms && kws.length === 0) legacyTerms.split(",").filter(Boolean).forEach((t) => kws.push({ term: t, mode: "any" }));
+    return kws;
+  })();
+  const initialCountries = searchParams.get("countries") ? searchParams.get("countries").split(",").filter(Boolean) : [];
+  const initialGrades = searchParams.get("grades") ? searchParams.get("grades").split(",").filter(Boolean) : [];
+  // Supplier types: from route prop (single) OR query param (multi)
+  const initialSupplierTypes = (() => {
+    if (routeSupplierType) return [routeSupplierType];
+    const fromParam = searchParams.get("supplierTypes") ? searchParams.get("supplierTypes").split(",").filter(Boolean) : [];
+    return fromParam;
+  })();
+  const initialBuyerTypes = searchParams.get("buyerTypes") ? searchParams.get("buyerTypes").split(",").filter(Boolean) : [];
 
-      {/* Center content */}
-      <div className="relative z-10 text-center max-w-lg mx-auto">
-        <p className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2">Get Started!</p>
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-4">
-          Ready to Increase Your<br />Profits?
-        </h2>
-        <p className="text-sm text-slate-500 leading-relaxed mb-8">
-          Join thousands of retailers and suppliers already growing their business on WholesaleUp.
-        </p>
-        <div className="flex items-center justify-center gap-4">
-          <a href="/register?type=retailer" className="inline-flex items-center gap-2.5 px-7 py-3 text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-full transition-all shadow-lg shadow-slate-200 hover:shadow-slate-300">
-            <ShoppingCart size={16} />
-            I want to buy
-          </a>
-          <a href="/register?type=supplier" className="inline-flex items-center gap-2.5 px-7 py-3 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-full transition-all shadow-lg shadow-orange-200 hover:shadow-orange-300">
-            <Store size={16} />
-            I want to sell
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function Phase4Suppliers() {
-  const [isPremium, setIsPremium] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [listingMode, setListingMode] = useState("grid");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [filterCollapsed, setFilterCollapsed] = useState(false);
+  const [filterCollapsed, toggleFilterCollapsed, setFilterCollapsed] = usePanelCollapse("wup-filter-collapsed");
   const [descExpanded, setDescExpanded] = useState(false);
   const [searchMode, setSearchMode] = useState("any");
   const [inlineSearch, setInlineSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const urlPage = parseInt(searchParams.get("page")) || 1;
+  const [page, setPageState] = useState(urlPage);
   const [perPage, setPerPage] = useState(9);
+
+  // Sync page state when URL changes (browser back/forward)
+  useEffect(() => {
+    setPageState(urlPage);
+  }, [urlPage]);
+
+  // Track previous path to detect category/subcategory navigation
+  const prevPathRef = useRef(typeof window !== "undefined" ? window.location.pathname : "/suppliers");
+
+  // Sync category/subcategory when route props change (browser back/forward)
+  useEffect(() => {
+    const newCat = routeCategory || null;
+    const newSub = routeSubcategory && routeCategory ? `${routeCategory}--${routeSubcategory}` : null;
+    setFilters((prev) => {
+      if (prev.category === newCat && prev.subcategory === newSub) return prev;
+      return { ...prev, category: newCat, subcategory: newSub };
+    });
+    // Also update prevPathRef so the sync effect doesn't re-push
+    let basePath = "/suppliers";
+    if (newCat) {
+      basePath = `/suppliers/${newCat}`;
+      if (newSub) basePath = `${basePath}/${routeSubcategory}`;
+    }
+    prevPathRef.current = basePath;
+  }, [routeCategory, routeSubcategory]);
+
+  const setPage = useCallback((newPage) => {
+    setPageState(newPage);
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage <= 1) {
+      params.delete("page");
+    } else {
+      params.set("page", String(newPage));
+    }
+    const qs = params.toString();
+    router.push(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+  }, [searchParams, router]);
+
+  const buildPageHref = useCallback((n) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (n <= 1) { params.delete("page"); } else { params.set("page", String(n)); }
+    const qs = params.toString();
+    return qs ? `?${qs}` : window.location.pathname;
+  }, [searchParams]);
   const [filters, setFilters] = useState({
     rating: null,
-    category: null,
-    subcategory: null,
-    priceMin: "",
-    priceMax: "",
-    countries: [],
-    dropshipping: false,
-    grades: [],
-    businessTypes: [],
-    keyword: "",
+    category: initialCategory,
+    subcategory: initialSubcategory,
+    priceMin: searchParams.get("priceMin") || "",
+    priceMax: searchParams.get("priceMax") || "",
+    countries: initialCountries,
+    dropshipping: searchParams.get("dropshipping") === "true",
+    grades: initialGrades,
+    supplierTypes: initialSupplierTypes,
+    buyerTypes: initialBuyerTypes,
+    keywords: initialKeywords,
   });
   const [contactSupplier, setContactSupplier] = useState(null);
+  const [phoneSupplier, setPhoneSupplier] = useState(null);
   const [reportInvalid, setReportInvalid] = useState(null); // { supplier, field }
 
-  // Listen for demo auth
-  useEffect(() => {
-    const handler = (e) => {
-      setIsLoggedIn(e.detail.loggedIn);
-      setIsPremium(e.detail.premium || false);
-    };
-    window.addEventListener("demo-auth", handler);
-    return () => window.removeEventListener("demo-auth", handler);
-  }, []);
+  /* ── Dynamic page title — reflects active filters ──
+     Pattern: "{keywords} {category} {supplierType(s)|Wholesale Suppliers} from {countries}"
+     Examples:
+       "Mens Clothing Wholesale Suppliers"
+       "Mens Clothing Liquidators from United Kingdom"
+       "Mens Clothing Liquidators and Importers from United Kingdom, Germany, France +2 more"
+     ─────────────────────────────────────────────────── */
+  const SUPPLIER_TYPE_LABELS = {
+    manufacturer: "Manufacturers", "brand-owner": "Brand Owners", "private-label": "Private Label Suppliers",
+    wholesaler: "Wholesalers", distributor: "Distributors", importer: "Importers", exporter: "Exporters",
+    "trading-company": "Trading Companies", liquidator: "Liquidators", dropshipper: "Dropshippers",
+    "sourcing-agent": "Sourcing Agents", "artisan-maker": "Artisan Makers",
+  };
+  const pageTitle = (() => {
+    const keywordPrefix = filters.keywords?.length
+      ? filters.keywords.map((kw) => typeof kw === "string" ? kw : kw.term).join(" ") + " "
+      : "";
+    // Category / subcategory prefix
+    let catPrefix = "";
+    if (filters.subcategory) {
+      const subId = filters.subcategory.includes("--") ? filters.subcategory.split("--")[1] : filters.subcategory;
+      catPrefix = getSubcategoryById(subId)?.sub?.label || "";
+    } else if (filters.category) {
+      catPrefix = getCategoryById(filters.category)?.name || "";
+    }
+    // Supplier type suffix — replaces "Wholesale Suppliers" when types are selected
+    const types = filters.supplierTypes || [];
+    let typeSuffix;
+    if (types.length === 0) {
+      typeSuffix = "Wholesale Suppliers";
+    } else if (types.length === 1) {
+      typeSuffix = SUPPLIER_TYPE_LABELS[types[0]] || "Wholesale Suppliers";
+    } else {
+      const labels = types.map((t) => SUPPLIER_TYPE_LABELS[t]).filter(Boolean);
+      typeSuffix = labels.length <= 2
+        ? labels.join(" and ")
+        : labels.slice(0, 2).join(", ") + ` and ${labels[labels.length - 1]}`;
+    }
+    // Country suffix — "from {countries}"
+    let countrySuffix = "";
+    if (filters.countries?.length > 0) {
+      const names = filters.countries.map((iso) => CANONICAL_COUNTRIES.find((c) => c.iso === iso)?.label || iso.toUpperCase()).filter(Boolean);
+      if (names.length <= 3) {
+        countrySuffix = " from " + (names.length === 1 ? names[0] : names.slice(0, -1).join(", ") + " and " + names[names.length - 1]);
+      } else {
+        countrySuffix = ` from ${names.slice(0, 3).join(", ")} +${names.length - 3} more`;
+      }
+    }
+    return `${keywordPrefix}${catPrefix}${catPrefix ? " " : ""}${typeSuffix}${countrySuffix}`;
+  })();
 
-  // Apply filters
-  const filteredSuppliers = SUPPLIERS.filter((s) => {
+  /* ── Sync filter state → URL (SEO path segments for category) ──
+     Category uses path segment: /suppliers/clothing-fashion
+     All other filters remain as query params.
+     ─────────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    const params = new URLSearchParams();
+    // Category & subcategory go in the path, not query params
+    if (filters.priceMin) params.set("priceMin", filters.priceMin);
+    if (filters.priceMax) params.set("priceMax", filters.priceMax);
+    if (filters.countries.length > 0) params.set("countries", filters.countries.join(","));
+    if (filters.dropshipping) params.set("dropshipping", "true");
+    if (filters.grades.length > 0) params.set("grades", filters.grades.join(","));
+    // Single supplier type → path segment; multiple → query param
+    if (filters.supplierTypes?.length > 1) params.set("supplierTypes", filters.supplierTypes.join(","));
+    if (filters.buyerTypes?.length > 0) params.set("buyerTypes", filters.buyerTypes.join(","));
+    /* Per-mode keyword params: ?any=nike,adidas&exact=dark+blue&all=long,laces */
+    const kwByMode = { any: [], all: [], exact: [] };
+    (filters.keywords || []).forEach((kw) => {
+      const term = typeof kw === "string" ? kw : kw.term;
+      const mode = typeof kw === "string" ? "any" : kw.mode;
+      if (kwByMode[mode]) kwByMode[mode].push(term);
+    });
+    if (kwByMode.any.length > 0) params.set("any", kwByMode.any.join(","));
+    if (kwByMode.all.length > 0) params.set("all", kwByMode.all.join(","));
+    if (kwByMode.exact.length > 0) params.set("exact", kwByMode.exact.join(","));
+    const qs = params.toString();
+    // Build SEO path: /suppliers, /suppliers/clothing-fashion, or /suppliers/clothing-fashion/mens-clothing
+    // Single supplier type appended as path segment: /suppliers/liquidators, /suppliers/clothing-fashion/liquidators
+    const SUPPLIER_TYPE_SLUGS = {
+      manufacturer: "manufacturers", "brand-owner": "brand-owners", "private-label": "private-label",
+      wholesaler: "wholesalers", distributor: "distributors", importer: "importers", exporter: "exporters",
+      "trading-company": "trading-companies", liquidator: "liquidators", dropshipper: "dropshippers",
+      "sourcing-agent": "sourcing-agents", "artisan-maker": "artisan-makers",
+    };
+    let basePath = "/suppliers";
+    if (filters.category) {
+      basePath = `/suppliers/${filters.category}`;
+      if (filters.subcategory) {
+        const subId = filters.subcategory.includes("--") ? filters.subcategory.split("--")[1] : filters.subcategory;
+        basePath = `${basePath}/${subId}`;
+      }
+    }
+    // Single supplier type as path segment (appended after category if present)
+    if (filters.supplierTypes?.length === 1) {
+      const typeSlug = SUPPLIER_TYPE_SLUGS[filters.supplierTypes[0]] || filters.supplierTypes[0];
+      basePath += `/${typeSlug}`;
+    }
+    const newUrl = qs ? `${basePath}?${qs}` : basePath;
+    // Path changed (category navigation) → push to create history entry
+    // Only query params changed (price, country, etc.) → replace to avoid clutter
+    const pathChanged = basePath !== prevPathRef.current;
+    prevPathRef.current = basePath;
+    if (pathChanged) {
+      router.push(newUrl, { scroll: false });
+    } else {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [filters, router]);
+
+  /* demo-auth: auth state now from DemoAuthContext (supports demo dropdown + real session) */
+
+  // Non-keyword filters shared by exact + broad
+  const passesNonKeywordFilters = (s) => {
     if (filters.rating && s.rating < filters.rating) return false;
     if (filters.category && !s.categories.some((c) => c.toLowerCase().replace(/[^a-z]/g, "").includes(filters.category.replace(/[^a-z]/g, "")))) return false;
-    if (filters.countries.length > 0 && !filters.countries.includes(s.country)) return false;
-    if (filters.keyword && !s.name.toLowerCase().includes(filters.keyword.toLowerCase()) && !s.description.toLowerCase().includes(filters.keyword.toLowerCase())) return false;
+    // Map legacy uppercase codes (UK→gb, DE→de) to canonical ISO alpha-2 lowercase
+    const LEGACY_TO_ISO = { UK: "gb", DE: "de", PL: "pl", NL: "nl", US: "us", ES: "es", IT: "it", FR: "fr" };
+    const supplierCountryISO = LEGACY_TO_ISO[s.country] || s.country?.toLowerCase();
+    if (filters.countries.length > 0 && !filters.countries.includes(supplierCountryISO)) return false;
     if (filters.dropshipping && !s.focus.some((f) => f.toLowerCase().includes("drop"))) return false;
+    // Supplier type filter — match against supplier's supplierType array (e.g. ["wholesaler", "distributor"])
+    if (filters.supplierTypes?.length > 0 && !(s.supplierType || []).some((st) => filters.supplierTypes.includes(st))) return false;
+    // Buyer types served — suppliers with no buyerTypesServed data are considered as serving all buyer types
+    if (filters.buyerTypes?.length > 0) {
+      const served = s.buyerTypesServed || [];
+      if (served.length > 0 && !filters.buyerTypes.some((bt) => served.includes(bt))) return false;
+    }
     return true;
-  });
+  };
+
+  /* Extract keyword terms (supports both string and { term, mode } formats) */
+  const keywords = (filters.keywords || []).map((kw) => (typeof kw === "string" ? kw : kw.term).toLowerCase());
+  const hasMultipleKeywords = keywords.length > 1;
+
+  const matchesKeyword = (s, kw) =>
+    (s.companyName || "").toLowerCase().includes(kw) || (s.companyDescription || "").toLowerCase().includes(kw);
+
+  // Sort helper: Supplier Pro accounts always appear before standard suppliers
+  const proFirst = (a, b) => (b.isSupplierPro ? 1 : 0) - (a.isSupplierPro ? 1 : 0);
+
+  // Exact matches: passes all filters including ALL keywords
+  const exactSuppliers = SUPPLIERS.filter((s) => {
+    if (!passesNonKeywordFilters(s)) return false;
+    if (keywords.length > 0 && !keywords.every((kw) => matchesKeyword(s, kw))) return false;
+    return true;
+  }).sort(proFirst);
+
+  // Broad matches: passes non-keyword filters + matches AT LEAST ONE keyword but NOT all
+  const broadSuppliersReal = hasMultipleKeywords
+    ? SUPPLIERS.filter((s) => {
+        if (!passesNonKeywordFilters(s)) return false;
+        const matchCount = keywords.filter((kw) => matchesKeyword(s, kw)).length;
+        return matchCount > 0 && matchCount < keywords.length;
+      }).sort(proFirst)
+    : [];
+
+  // Demo mode: when no keywords are active, simulate a split to showcase the separator
+  const DEMO_EXACT_COUNT = 6;
+  const isDemoSplit = keywords.length === 0 && exactSuppliers.length > DEMO_EXACT_COUNT;
+  const broadSuppliers = isDemoSplit ? exactSuppliers.slice(DEMO_EXACT_COUNT) : broadSuppliersReal;
+  const displayExactSuppliers = isDemoSplit ? exactSuppliers.slice(0, DEMO_EXACT_COUNT) : exactSuppliers;
+
+  // Combined for pagination/count
+  const filteredSuppliers = [...exactSuppliers, ...broadSuppliersReal];
 
   // Paginate
   const totalSuppliers = filteredSuppliers.length;
   const totalPages = Math.ceil(totalSuppliers / perPage);
   const paginatedSuppliers = filteredSuppliers.slice((page - 1) * perPage, page * perPage);
 
+  // Separator logic:
+  // - Show between exact and broad when both exist (page 1 only)
+  // - Show at top when ALL results are broad / no exact matches (page 1 only)
+  const hasBroadResults = broadSuppliers.length > 0;
+  const hasExactResults = displayExactSuppliers.length > 0;
+  const allResultsAreBroad = hasBroadResults && !hasExactResults;
+  const showSeparatorTop = allResultsAreBroad && page === 1;
+
+  // For the current page, split into exact vs broad display groups
+  const pageStart = (page - 1) * perPage;
+  const exactEndIndex = displayExactSuppliers.length;
+  const exactOnPage = Math.max(0, Math.min(perPage, exactEndIndex - pageStart));
+  const broadStartsOnThisPage = hasBroadResults && hasExactResults && page === 1 && pageStart < exactEndIndex && pageStart + perPage > exactEndIndex;
+  const entirePageIsBroad = hasBroadResults && pageStart >= exactEndIndex;
+  const paginatedExact = broadStartsOnThisPage ? paginatedSuppliers.slice(0, exactOnPage) : (pageStart < exactEndIndex ? paginatedSuppliers : []);
+  const paginatedBroad = broadStartsOnThisPage ? paginatedSuppliers.slice(exactOnPage) : (entirePageIsBroad ? paginatedSuppliers : []);
+
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'DM Sans', 'Outfit', sans-serif" }}>
       <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {/* Breadcrumb */}
-        <Breadcrumb items={[
-          { label: "WholesaleUp", href: "/" },
-          { label: "Suppliers" },
-        ]} />
+        {/* Breadcrumb — updates with active category/subcategory */}
+        <Breadcrumb items={(() => {
+          const crumbs = [{ label: "WholesaleUp", href: "/" }];
+          if (filters.category) {
+            const cat = FILTER_CATEGORIES.find((c) => c.id === filters.category);
+            crumbs.push({ label: "Wholesale Suppliers", href: "/suppliers" });
+            if (cat) {
+              if (filters.subcategory) {
+                const sub = cat.children?.find((ch) => ch.id === filters.subcategory);
+                crumbs.push({ label: cat.label, href: `/suppliers/${filters.category}` });
+                if (sub) {
+                  crumbs.push({ label: sub.label });
+                } else {
+                  crumbs[crumbs.length - 1] = { label: cat.label };
+                }
+              } else {
+                crumbs.push({ label: cat.label });
+              }
+            }
+          } else {
+            crumbs.push({ label: "Wholesale Suppliers" });
+          }
+          return crumbs;
+        })()} />
 
         {/* Layout: Filter Sidebar + Content */}
         <div className="flex gap-6 items-start">
-          {/* Collapsible Filter Panel */}
-          <div className="hidden lg:block relative shrink-0 sticky top-[90px] self-start">
-            <div className={`max-h-[calc(100vh-100px)] overflow-y-auto overflow-x-hidden scrollbar-hide transition-all duration-300 ease-in-out ${filterCollapsed ? "w-0" : "w-72"}`}>
-              <div className="w-72">
-                <FilterSidebar
-                  filters={filters}
-                  setFilters={setFilters}
-                  isOpen={mobileFilterOpen}
-                  onClose={() => setMobileFilterOpen(false)}
-                  hidePrice
-                  hideDropshipping
-                  hideGrade
-                  showBusinessType
-                />
-
-                {/* Join Today Promo Panel */}
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-b from-orange-50 to-orange-100/60 flex items-center justify-center pt-4 pb-0">
-                    <img
-                      src="https://wholesaledeals.vercel.app/assets/images/v3/deals/deals-vector.svg"
-                      alt="Join Today"
-                      className="w-48 h-auto"
-                    />
-                  </div>
-                  <div className="px-5 pb-5 pt-3 bg-gradient-to-b from-orange-50/40 to-white">
-                    <h3 className="text-lg font-extrabold text-slate-900 mb-3 text-center">Join Today</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                      Unlock tens of thousands of verified liquidation, wholesale, and dropshipping suppliers from across the EU, UK, North America, and beyond.
-                    </p>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                      Source fast-selling products at profit margins of 45% to 95%, all backed by our custom sourcing guarantee.
-                    </p>
-                    <div className="text-center">
-                      <a href="/register" className="inline-flex px-8 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-full transition-all shadow-sm">
-                        Join Now
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Filter toggle button */}
-            <button
-              onClick={() => setFilterCollapsed(!filterCollapsed)}
-              className={`absolute top-[52px] w-3 h-16 bg-orange-600 hover:bg-orange-500 rounded-r flex items-center justify-center transition-all z-10 shadow-md ${
-                filterCollapsed ? "left-0" : "-right-3"
-              }`}
-              title={filterCollapsed ? "Show filters" : "Hide filters"}
-            >
-              <ChevronDown size={10} className={`text-white transition-transform ${filterCollapsed ? "-rotate-90" : "rotate-90"}`} />
-            </button>
-          </div>
+          {/* Collapsible Filter Panel — shared component */}
+          <CollapsibleFilterPanel collapsed={filterCollapsed} onToggle={toggleFilterCollapsed}>
+            <FilterSidebar
+              filters={filters}
+              setFilters={setFilters}
+              isOpen={mobileFilterOpen}
+              onClose={() => setMobileFilterOpen(false)}
+              hidePrice
+              hideDropshipping
+              hideGrade
+              showBusinessType
+              showBuyerTypes
+            />
+          </CollapsibleFilterPanel>
 
           {/* Mobile filter overlay */}
           {mobileFilterOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
               <div className="absolute inset-0 bg-black/40" onClick={() => setMobileFilterOpen(false)} />
               <div className="absolute inset-y-0 left-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
-                <FilterSidebar filters={filters} setFilters={setFilters} isOpen={true} onClose={() => setMobileFilterOpen(false)} hidePrice hideDropshipping hideGrade showBusinessType />
+                <FilterSidebar filters={filters} setFilters={setFilters} isOpen={true} onClose={() => setMobileFilterOpen(false)} hidePrice hideDropshipping hideGrade showBusinessType showBuyerTypes />
               </div>
             </div>
           )}
@@ -1802,9 +2546,9 @@ export default function Phase4Suppliers() {
             <div className="flex gap-4 mb-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-extrabold text-slate-900">
-                  Suppliers <span className="text-base font-semibold text-slate-400">({SUPPLIERS.length.toLocaleString()} suppliers)</span>
+                  {pageTitle} <span className="text-base font-semibold text-slate-400">({SUPPLIERS.length.toLocaleString()} suppliers)</span>
                 </h1>
-                <h2 className="text-[15px] font-normal text-slate-500 mt-1 leading-relaxed">
+                <h2 className="text-sm font-normal text-slate-500 mt-1 leading-relaxed">
                   Browse our directory of verified wholesale suppliers, liquidators and dropshippers. Find trusted UK and international trade sources for brand-name and own-label products at competitive wholesale prices.{" "}
                   {descExpanded ? (
                     <>
@@ -1850,17 +2594,31 @@ export default function Phase4Suppliers() {
                   onChange={(e) => setInlineSearch(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && inlineSearch.trim()) {
-                      setFilters((p) => ({ ...p, keyword: inlineSearch.trim() }));
+                      const term = inlineSearch.trim();
+                      const newKw = { term, mode: searchMode || "any" };
+                      setFilters((p) => {
+                        const prev = p.keywords || [];
+                        const exists = prev.some((k) => (typeof k === "string" ? k : k.term) === term && (typeof k === "string" ? "any" : k.mode) === newKw.mode);
+                        return exists ? p : { ...p, keywords: [...prev, newKw] };
+                      });
+                      setInlineSearch("");
                       setPage(1);
                     }
                   }}
                   placeholder="Search suppliers..."
-                  className="w-full pl-9 pr-9 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+                  className="w-full pl-9 pr-9 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
                 />
                 <button
                   onClick={() => {
                     if (inlineSearch.trim()) {
-                      setFilters((p) => ({ ...p, keyword: inlineSearch.trim() }));
+                      const term = inlineSearch.trim();
+                      const newKw = { term, mode: searchMode || "any" };
+                      setFilters((p) => {
+                        const prev = p.keywords || [];
+                        const exists = prev.some((k) => (typeof k === "string" ? k : k.term) === term && (typeof k === "string" ? "any" : k.mode) === newKw.mode);
+                        return exists ? p : { ...p, keywords: [...prev, newKw] };
+                      });
+                      setInlineSearch("");
                       setPage(1);
                     }
                   }}
@@ -1908,22 +2666,51 @@ export default function Phase4Suppliers() {
             {/* Active Filter Chips */}
             <ActiveFilterChips filters={filters} setFilters={setFilters} searchMode={searchMode} />
 
+            {/* All results are broad — show separator at top (page 1 only) */}
+            {showSeparatorTop && (
+              <BroadMatchSeparator noExactMatches onRefine={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+            )}
+
             {/* ── Grid View ── */}
             {listingMode === "grid" && (
-              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 mt-4">
-                {paginatedSuppliers.map((s) => (
-                  <SupplierGridCard key={s.id} supplier={s} isPremium={isPremium} isLoggedIn={isLoggedIn} onContact={setContactSupplier} keyword={filters.keyword} />
-                ))}
-              </div>
+              <>
+                {paginatedExact.length > 0 && (
+                  <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 mt-4">
+                    {paginatedExact.map((s) => (
+                      <SupplierGridCard key={s.id} supplier={s} isPremium={isPremium} isLoggedIn={isLoggedIn} onContact={setContactSupplier} onCallNow={setPhoneSupplier} keyword={(filters.keywords || []).map((kw) => typeof kw === "string" ? kw : kw.term).join("|")} />
+                    ))}
+                  </div>
+                )}
+                {broadStartsOnThisPage && <BroadMatchSeparator exactCount={displayExactSuppliers.length} onRefine={() => window.scrollTo({ top: 0, behavior: "smooth" })} />}
+                {paginatedBroad.length > 0 && (
+                  <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 mt-4">
+                    {paginatedBroad.map((s) => (
+                      <SupplierGridCard key={`broad-${s.id}`} supplier={s} isPremium={isPremium} isLoggedIn={isLoggedIn} onContact={setContactSupplier} onCallNow={setPhoneSupplier} keyword={(filters.keywords || []).map((kw) => typeof kw === "string" ? kw : kw.term).join("|")} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* ── List View ── */}
             {listingMode === "list" && (
-              <div className="space-y-4 mt-4">
-                {paginatedSuppliers.map((s) => (
-                  <SupplierCard key={s.id} supplier={s} isPremium={isPremium} isLoggedIn={isLoggedIn} onContact={setContactSupplier} onReportInvalid={(sup, field) => setReportInvalid({ supplier: sup, field })} keyword={filters.keyword} />
-                ))}
-              </div>
+              <>
+                {paginatedExact.length > 0 && (
+                  <div className="space-y-4 mt-4">
+                    {paginatedExact.map((s) => (
+                      <SupplierCard key={s.id} supplier={s} isPremium={isPremium} isLoggedIn={isLoggedIn} onContact={setContactSupplier} onCallNow={setPhoneSupplier} onReportInvalid={(sup, field) => setReportInvalid({ supplier: sup, field })} keyword={(filters.keywords || []).map((kw) => typeof kw === "string" ? kw : kw.term).join("|")} />
+                    ))}
+                  </div>
+                )}
+                {broadStartsOnThisPage && <BroadMatchSeparator exactCount={displayExactSuppliers.length} onRefine={() => window.scrollTo({ top: 0, behavior: "smooth" })} />}
+                {paginatedBroad.length > 0 && (
+                  <div className="space-y-4 mt-4">
+                    {paginatedBroad.map((s) => (
+                      <SupplierCard key={`broad-${s.id}`} supplier={s} isPremium={isPremium} isLoggedIn={isLoggedIn} onContact={setContactSupplier} onCallNow={setPhoneSupplier} onReportInvalid={(sup, field) => setReportInvalid({ supplier: sup, field })} keyword={(filters.keywords || []).map((kw) => typeof kw === "string" ? kw : kw.term).join("|")} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Empty state */}
@@ -1933,7 +2720,7 @@ export default function Phase4Suppliers() {
                 <h3 className="text-lg font-bold text-slate-700 mb-1">No suppliers found</h3>
                 <p className="text-sm text-slate-400 mb-4">Try adjusting your filters to see more results</p>
                 <button
-                  onClick={() => { setFilters({ rating: null, category: null, subcategory: null, priceMin: "", priceMax: "", countries: [], dropshipping: false, grades: [], businessTypes: [], keyword: "" }); setPage(1); }}
+                  onClick={() => { setFilters({ rating: null, category: null, subcategory: null, priceMin: "", priceMax: "", countries: [], dropshipping: false, grades: [], supplierTypes: [], buyerTypes: [], keywords: [] }); setPage(1); }}
                   className="px-4 py-2 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition-colors"
                 >
                   Clear All Filters
@@ -1948,6 +2735,7 @@ export default function Phase4Suppliers() {
               setPage={setPage}
               perPage={perPage}
               setPerPage={setPerPage}
+              buildPageHref={buildPageHref}
             />
 
             {/* SEO Content */}
@@ -1979,7 +2767,26 @@ export default function Phase4Suppliers() {
 
       {/* Contact Supplier Modal */}
       {contactSupplier && (
-        <ContactSupplierModal supplier={contactSupplier} onClose={() => setContactSupplier(null)} />
+        <ContactSupplierModal name={contactSupplier.companyName || "Supplier"} onClose={() => setContactSupplier(null)} />
+      )}
+
+      {/* Phone Number Reveal Modal */}
+      {phoneSupplier && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setPhoneSupplier(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Phone size={18} className="text-orange-500" /> Supplier Phone</h3>
+              <button onClick={() => setPhoneSupplier(null)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+                <X size={16} className="text-slate-400" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-1">{phoneSupplier?.companyName || "Supplier"}</p>
+            <p className="text-sm text-slate-500 mb-3">Call the supplier directly:</p>
+            <a href={`tel:${phoneSupplier?.phone || "+44 20 7946 0958"}`} className="block w-full py-3 rounded-lg text-center text-lg font-bold text-orange-600 bg-orange-50 border border-orange-200 hover:bg-orange-100 transition-colors">
+              {phoneSupplier?.phone || "+44 20 7946 0958"}
+            </a>
+          </div>
+        </div>
       )}
 
       {/* Report Invalid Details Modal */}

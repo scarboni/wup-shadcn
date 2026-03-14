@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Logo Comparison</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@700;800;900&family=Outfit:wght@700;800;900&display=swap');
+  body { margin: 0; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 60px; font-family: 'DM Sans', sans-serif; }
+  .card { background: #1e293b; border-radius: 16px; padding: 40px 60px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .label { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .icon { width: 32px; height: 32px; }
+  .text { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .white { color: #ffffff; }
+  .orange { color: #f97316; }
+  .row { display: flex; gap: 40px; align-items: start; }
+  .dark-card { background: #f1f5f9; }
+  .dark-card .white { color: #0f172a; }
+  .sizes { display: flex; flex-direction: column; gap: 20px; align-items: center; }
+</style>
+</head>
+<body>
+
+<div class="row">
+  <div class="card">
+    <span class="label">Current — PascalCase</span>
+    <div class="sizes">
+      <div class="logo">
+        <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+          <path d="M18 22 L32 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M32 72 L50 38 L66 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text"><span class="white">Wholesale</span><span class="orange">Up</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="label">Option A — all lowercase</span>
+    <div class="sizes">
+      <div class="logo">
+        <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+          <path d="M18 22 L32 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M32 72 L50 38 L66 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text"><span class="white">wholesale</span><span class="orange">up</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <span class="label">Option B — lowercase with dot</span>
+    <div class="sizes">
+      <div class="logo">
+        <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+          <path d="M18 22 L32 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M32 72 L50 38 L66 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text"><span class="white">wholesale</span><span class="orange">up</span><span class="orange">.</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <span class="label">Option C — lowercase, "up" bold</span>
+    <div class="sizes">
+      <div class="logo">
+        <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+          <path d="M18 22 L32 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M32 72 L50 38 L66 72" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="text"><span class="white" style="font-weight:700">wholesale</span><span class="orange" style="font-weight:900">up</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Light background versions -->
+<div class="row">
+  <div class="card dark-card">
+    <span class="label" style="color:#94a3b8">Current — on light bg</span>
+    <div class="logo">
+      <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+        <path d="M18 22 L32 72" stroke="#0f172a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 72 L50 38 L66 72" stroke="#0f172a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="text"><span class="white">Wholesale</span><span class="orange">Up</span></span>
+    </div>
+  </div>
+
+  <div class="card dark-card">
+    <span class="label" style="color:#94a3b8">Lowercase — on light bg</span>
+    <div class="logo">
+      <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+        <path d="M18 22 L32 72" stroke="#0f172a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 72 L50 38 L66 72" stroke="#0f172a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="text"><span class="white">wholesale</span><span class="orange">up</span></span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

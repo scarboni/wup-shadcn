@@ -1,0 +1,276 @@
+// ─────────────────────────────────────────────────────────────
+// WholesaleUp — Prisma Schema
+// Production database schema for PostgreSQL
+// Run: npx prisma migrate dev --name init
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Auth: NextAuth v5 adapter tables ────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  firstName     String?
+  lastName      String?
+  username      String?   @unique
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // bcrypt hash — null for OAuth-only users
+  newsletter    Boolean   @default(false)
+  agreeTerms    Boolean   @default(false)
+  tier          String    @default("free") // "free" | "starter" | "pro" | "enterprise"
+  tierExpiresAt DateTime?
+  phone         String?
+  company       String?
+  website       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  savedDeals    SavedDeal[]
+  loginHistory  LoginHistory[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  revoked      Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  type       String   @default("email") // "email" | "password-reset"
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ── Login tracking ──────────────────────────────────────────
+
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  ip        String?
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ── Business data ───────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?  // Lucide icon name
+  image       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deals     Deal[]
+  suppliers SupplierCategory[]
+
+  @@index([slug])
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  logo        String?
+  banner      String?
+  country     String?
+  city        String?
+  website     String?
+  email       String?
+  phone       String?
+  verified    Boolean  @default(false)
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  minOrder    String?  // e.g. "£500"
+  leadTime    String?  // e.g. "3-5 days"
+  established Int?     // year
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deals       Deal[]
+  categories  SupplierCategory[]
+  reviews     Review[]
+
+  @@index([slug])
+  @@index([country])
+  @@index([verified])
+}
+
+model SupplierCategory {
+  supplierId String
+  categoryId String
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([supplierId, categoryId])
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?  @db.Text
+  price       String?  // display price e.g. "£2,499"
+  priceValue  Float?   // numeric for sorting
+  rrp         String?  // recommended retail price
+  discount    String?  // e.g. "40% off"
+  image       String?
+  images      String[] // additional images
+  country     String?
+  moq         String?  // minimum order quantity
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  premium     Boolean  @default(false) // requires paid tier
+  supplierId  String
+  categoryId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  supplier  Supplier    @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  category  Category?   @relation(fields: [categoryId], references: [id])
+  savedBy   SavedDeal[]
+
+  @@index([slug])
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([featured])
+  @@index([active])
+  @@index([createdAt])
+}
+
+model SavedDeal {
+  userId String
+  dealId String
+  savedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@id([userId, dealId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rating     Int      // 1-5
+  title      String?
+  content    String?  @db.Text
+  author     String?
+  supplierId String
+  approved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  supplier Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([approved])
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  company   String?
+  content   String   @db.Text
+  avatar    String?
+  rating    Int      @default(5)
+  featured  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([featured])
+}
+
+model PricingPlan {
+  id          String   @id @default(cuid())
+  name        String   @unique // "starter" | "pro" | "enterprise"
+  displayName String
+  price       String   // e.g. "£29/mo"
+  priceValue  Float    // numeric
+  period      String   @default("monthly")
+  features    String[] // list of feature strings
+  highlighted Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ContactSubmission {
+  id          String   @id @default(cuid())
+  queryType   String
+  fullName    String
+  email       String
+  subject     String?
+  message     String   @db.Text
+  companyName String?
+  phone       String?
+  website     String?
+  status      String   @default("new") // "new" | "read" | "replied" | "closed"
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ── Platform stats (cached) ─────────────────────────────────
+
+model PlatformStat {
+  key       String   @id // "suppliers" | "deals" | "members"
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}

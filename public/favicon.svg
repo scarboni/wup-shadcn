@@ -1,0 +1,9 @@
+<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Transparent background -->
+  <!-- Right upstroke — transparent, drawn first so W strokes paint over the junction -->
+  <path d="M66 72 L82 28" stroke="transparent" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="82,14 70,32 94,32" fill="#f97316"/>
+  <!-- Dark blue W strokes (slate-900: #0f172a) -->
+  <path d="M18 22 L32 72" stroke="#0f172a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 72 L50 38 L66 72" stroke="#0f172a" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

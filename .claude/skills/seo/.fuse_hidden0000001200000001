@@ -1,0 +1,441 @@
+---
+name: seo
+description: |
+  **SEO Best Practices Reference**: Comprehensive SEO standards for Next.js 15 / React 19 web development. Reference this skill whenever building pages, creating URLs, writing meta tags, adding images, structuring headings, implementing structured data, or doing anything that affects search engine visibility.
+  MANDATORY TRIGGERS: SEO, URL structure, meta tags, Open Graph, schema markup, structured data, sitemap, robots.txt, canonical, hreflang, alt text, page speed, Core Web Vitals, search engine, rich results, slug, keyword, crawl, index
+---
+
+# SEO Best Practices — Next.js 15 / React 19
+
+This skill provides actionable SEO standards for the WholesaleUp project. Reference it whenever creating or modifying pages, URLs, components, or content that affects search visibility.
+
+---
+
+## 1. URL Structure
+
+### Path Rules
+- **Always use lowercase hyphens** as word separators: `/wholesale-suppliers` not `/wholesale_suppliers` or `/wholesaleSuppliers`
+- Keep URLs short, descriptive, and keyword-rich: `/deals/calvin-klein-jeans` not `/deals/item?id=42`
+- Avoid trailing slashes inconsistency — pick one pattern and stick to it
+- Never expose implementation details: no `.html`, `.php`, no `/api/` in user-facing URLs
+- Avoid deep nesting beyond 3 levels: `/category/subcategory/product` is the max
+
+### Query Parameters
+- Query params (`?q=`, `?sort=`, `?page=`) are fine for filters, search, and pagination — Google handles them well
+- Use `+` or `%20` for spaces in query values (both are standard, `+` is more readable)
+- For SEO-critical filtered views, prefer path segments: `/deals/clothing` over `/deals?category=clothing`
+- Add `rel="canonical"` to filtered/sorted pages pointing to the unfiltered version
+
+### Slugs
+- Generate from the item title: `"Calvin Klein Jeans Shorts"` → `calvin-klein-jeans-shorts`
+- Strip special characters, collapse multiple hyphens
+- For duplicate slugs, append a short unique suffix: `calvin-klein-jeans-shorts-2`
+
+```js
+// Slug generator
+function toSlug(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')    // remove special chars
+    .replace(/[\s_]+/g, '-')      // spaces/underscores → hyphens
+    .replace(/-+/g, '-')          // collapse multiple hyphens
+    .replace(/^-|-$/g, '');       // trim leading/trailing hyphens
+}
+```
+
+---
+
+## 2. Meta Tags & Open Graph
+
+### Essential Meta Tags (per page)
+
+```jsx
+// Next.js 15 App Router — layout.js or page.js
+export const metadata = {
+  title: 'Wholesale Deals on Electronics | WholesaleUp',
+  description: 'Browse 4,691 verified wholesale deals on electronics. Buy direct from trusted suppliers at up to 95% below retail.',
+  alternates: {
+    canonical: 'https://wholesaleup.com/deals/electronics',
+  },
+  openGraph: {
+    title: 'Wholesale Electronics Deals | WholesaleUp',
+    description: 'Browse 4,691 verified wholesale deals on electronics.',
+    url: 'https://wholesaleup.com/deals/electronics',
+    siteName: 'WholesaleUp',
+    images: [{ url: '/og/electronics.jpg', width: 1200, height: 630, alt: 'Wholesale electronics deals' }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Wholesale Electronics Deals | WholesaleUp',
+    description: 'Browse 4,691 verified wholesale deals on electronics.',
+    images: ['/og/electronics.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    'max-image-preview': 'large',
+    'max-snippet': -1,
+  },
+};
+```
+
+### Dynamic Metadata
+
+```jsx
+// For pages with dynamic data (e.g., /deals/[slug])
+export async function generateMetadata({ params }) {
+  const deal = await getDeal(params.slug);
+  return {
+    title: `${deal.name} — Wholesale Deal | WholesaleUp`,
+    description: `Buy ${deal.name} wholesale from ${deal.supplier}. ${deal.currency}${deal.price} per unit ex.VAT.`,
+    alternates: { canonical: `https://wholesaleup.com/deals/${params.slug}` },
+    openGraph: {
+      title: deal.name,
+      images: [{ url: deal.image, width: 800, height: 600, alt: deal.name }],
+    },
+  };
+}
+```
+
+### Title Tag Formula
+- **Homepage**: `Brand — Value Proposition` → `WholesaleUp — Verified Wholesale & Dropship Deals`
+- **Category**: `Category Deals | Brand` → `Wholesale Electronics Deals | WholesaleUp`
+- **Product**: `Product Name — Deal Type | Brand` → `Calvin Klein Jeans Shorts — Wholesale Deal | WholesaleUp`
+- **Info page**: `Page Title | Brand` → `Pricing Plans | WholesaleUp`
+- Keep titles under 60 characters, descriptions under 155 characters
+
+---
+
+## 3. Heading Hierarchy & HTML Semantics
+
+### Rules
+- Every page gets exactly **one `<h1>`** — it should contain the primary keyword
+- Headings follow strict hierarchy: h1 → h2 → h3 (never skip levels)
+- Use semantic HTML elements: `<main>`, `<nav>`, `<article>`, `<section>`, `<aside>`, `<header>`, `<footer>`
+- Don't use headings for styling — use CSS classes instead
+- Add `aria-label` to repeated `<nav>` elements to distinguish them
+
+### Example Structure
+```
+<h1>Wholesale Deals</h1>                    ← page title, one per page
+  <h2>Trending Deals</h2>                   ← major section
+  <h2>Latest Deals</h2>                     ← major section
+    <h3>Calvin Klein Jeans Shorts</h3>       ← item within section
+    <h3>Nike Air Max Sneakers</h3>           ← item within section
+  <h2>Browse by Category</h2>               ← major section
+```
+
+---
+
+## 4. Image SEO
+
+### Rules
+- **Always provide descriptive `alt` text**: `alt="Calvin Klein men's slim fit jeans in dark blue"` not `alt="product image"` or `alt=""`
+- Use `loading="lazy"` for below-the-fold images, `loading="eager"` or `priority` for hero/LCP images
+- Prefer modern formats: WebP (90%+ browser support) with JPEG fallback
+- Use Next.js `<Image>` component — it handles srcset, lazy loading, and format conversion automatically
+- Name image files descriptively: `calvin-klein-jeans-shorts.webp` not `IMG_4521.jpg`
+- Include `width` and `height` attributes to prevent CLS (layout shift)
+
+```jsx
+import Image from 'next/image';
+
+<Image
+  src="/products/calvin-klein-jeans-shorts.webp"
+  alt="Calvin Klein men's slim fit jeans shorts in dark wash denim"
+  width={400}
+  height={400}
+  priority={isAboveFold}  // true for hero images
+/>
+```
+
+---
+
+## 5. Structured Data (JSON-LD)
+
+### E-Commerce Product Schema
+
+```jsx
+<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Calvin Klein Jeans Shorts",
+  "description": "Wholesale Calvin Klein men's jeans shorts, available in bulk.",
+  "image": "https://wholesaleup.com/products/calvin-klein-jeans-shorts.webp",
+  "brand": { "@type": "Brand", "name": "Calvin Klein" },
+  "offers": {
+    "@type": "Offer",
+    "price": "48.05",
+    "priceCurrency": "GBP",
+    "availability": "https://schema.org/InStock",
+    "seller": { "@type": "Organization", "name": "WholesaleUp" },
+    "priceValidUntil": "2026-12-31"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.6",
+    "reviewCount": "127"
+  }
+}) }} />
+```
+
+### Organization Schema (site-wide)
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "WholesaleUp",
+  "url": "https://wholesaleup.com",
+  "logo": "https://wholesaleup.com/logo.svg",
+  "sameAs": ["https://twitter.com/wholesaleup", "https://linkedin.com/company/wholesaleup"],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "email": "service@wholesaleup.com",
+    "contactType": "customer service"
+  }
+}
+```
+
+### Breadcrumb Schema
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://wholesaleup.com" },
+    { "@type": "ListItem", "position": 2, "name": "Deals", "item": "https://wholesaleup.com/deals" },
+    { "@type": "ListItem", "position": 3, "name": "Electronics", "item": "https://wholesaleup.com/deals/electronics" }
+  ]
+}
+```
+
+### FAQ Schema (for pricing/help pages)
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I register as a retailer?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Click Join Free, fill in your business details, and get instant access to wholesale deals."
+      }
+    }
+  ]
+}
+```
+
+---
+
+## 6. Core Web Vitals
+
+### Targets (2025-2026)
+| Metric | Good | Needs Improvement | Poor |
+|--------|------|-------------------|------|
+| LCP (Largest Contentful Paint) | ≤ 2.5s | ≤ 4.0s | > 4.0s |
+| INP (Interaction to Next Paint) | ≤ 200ms | ≤ 500ms | > 500ms |
+| CLS (Cumulative Layout Shift) | ≤ 0.1 | ≤ 0.25 | > 0.25 |
+
+### Optimization Strategies
+- **LCP**: Preload hero image, use `priority` on Next.js Image, inline critical CSS, use server components
+- **INP**: Debounce event handlers, use `useTransition` for non-urgent updates, avoid layout thrashing
+- **CLS**: Always set `width`/`height` on images, use `min-height` on dynamic containers, avoid injecting content above existing content
+
+---
+
+## 7. Next.js 15 Specific
+
+### robots.ts
+```ts
+import { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      { userAgent: '*', allow: '/', disallow: ['/api/', '/dashboard/', '/account-profile/'] },
+    ],
+    sitemap: 'https://wholesaleup.com/sitemap.xml',
+  };
+}
+```
+
+### sitemap.ts
+```ts
+import { MetadataRoute } from 'next';
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const deals = await getAllDeals();
+  const dealUrls = deals.map((deal) => ({
+    url: `https://wholesaleup.com/deals/${deal.slug}`,
+    lastModified: deal.updatedAt,
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }));
+
+  return [
+    { url: 'https://wholesaleup.com', lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
+    { url: 'https://wholesaleup.com/deals', lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: 'https://wholesaleup.com/suppliers', lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
+    { url: 'https://wholesaleup.com/pricing', lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7 },
+    ...dealUrls,
+  ];
+}
+```
+
+### Server Components for SEO
+- Use React Server Components (default in App Router) for SEO-critical content — they render on the server and deliver full HTML to crawlers
+- Only use `"use client"` for interactive elements (dropdowns, modals, search)
+- Avoid client-side-only data fetching for content that needs to be indexed
+
+---
+
+## 8. Internal Linking
+
+### Rules
+- Use descriptive anchor text: `<a href="/deals/electronics">wholesale electronics deals</a>` not `<a href="/deals/electronics">click here</a>`
+- Link contextually from content — don't cluster all links in one spot
+- Every important page should be reachable within 3 clicks from the homepage
+- Use breadcrumbs on all pages below the homepage level
+- Cross-link related content: deal pages → supplier profile, supplier profile → their deals
+
+---
+
+## 9. Accessibility = SEO
+
+Google increasingly uses accessibility signals as ranking factors. WCAG compliance directly improves SEO:
+
+- **All interactive elements need `aria-label`** when no visible text label exists
+- **All images need descriptive `alt` text** (also helps image search rankings)
+- **Heading hierarchy must be logical** (h1 → h2 → h3, no skipping)
+- **Color contrast ratios**: minimum 4.5:1 for body text, 3:1 for large text
+- **Keyboard navigation**: all interactive elements must be keyboard-accessible
+- **Focus indicators**: visible focus rings on interactive elements
+- **Skip links**: "Skip to main content" link for screen reader users
+
+---
+
+## 10. E-Commerce Specific
+
+### Product Listing Pages
+- Include item count in title: `"4,691 Wholesale Deals | WholesaleUp"`
+- Use pagination with `rel="next"` / `rel="prev"` (or load-more with proper URL updates)
+- Make filtered URLs crawlable when they represent important categories
+- Add `noindex` to low-value filter combinations (e.g., `?sort=price&color=blue&size=xl`)
+
+### Product Detail Pages
+- Product schema with price, availability, brand, and reviews
+- High-quality images with descriptive alt text and zoom capability
+- Breadcrumb navigation with schema markup
+- Related products section for internal linking
+- User reviews (fresh content signals)
+
+---
+
+## 11. Quick Reference Checklist
+
+For every new page or component, verify:
+
+- [ ] URL uses lowercase hyphens, is short and descriptive
+- [ ] Has unique `<title>` tag under 60 characters with primary keyword
+- [ ] Has unique `<meta description>` under 155 characters
+- [ ] Has exactly one `<h1>` with primary keyword
+- [ ] Heading hierarchy is logical (no skipped levels)
+- [ ] All images have descriptive `alt` text
+- [ ] Hero/LCP images use `priority` loading
+- [ ] Below-fold images use `loading="lazy"`
+- [ ] Open Graph and Twitter Card meta tags are set
+- [ ] Canonical URL is set
+- [ ] Structured data (JSON-LD) added where applicable
+- [ ] Internal links use descriptive anchor text
+- [ ] Interactive elements have `aria-label` attributes
+- [ ] Page renders meaningful content server-side (not client-only)
+
+---
+
+## 12. WholesaleUp SEO Implementation Status
+
+Last updated: 2026-03-08
+
+### 12.1 What's Implemented
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Sitemap (`src/app/sitemap.ts`) | ✅ Done | 11 static pages. Dynamic deal/supplier URLs stubbed for Phase 4. |
+| Robots.txt (`public/robots.txt`) | ✅ Done | Blocks `/api/`, `/dashboard`, `/shell`, `/gating`. References sitemap. |
+| Page metadata (title + description) | ✅ Done | 22/24 pages have exports. Root page.tsx and account-access missing. |
+| Security headers (HSTS, CSP, Referrer) | ✅ Done | Configured in `next.config.js`. |
+| `next/image` bulk conversion | ✅ Done | Product images, hero, avatars, thumbnails converted. Tiny flags left as `<img>`. |
+| Organization JSON-LD | ✅ Done | In `layout.tsx`, includes WebSite + SearchAction for sitelinks search box. |
+| BreadcrumbList JSON-LD | ✅ Done | `breadcrumb.jsx` emits JSON-LD alongside visual breadcrumbs. |
+| FAQPage JSON-LD | ✅ Done | Pricing page FAQ accordion has schema markup. |
+| Canonical URLs | ✅ Done | All public page.tsx files have `alternates.canonical`. |
+| Open Graph tags | ✅ Done | All public pages have `openGraph` with title, description, image, type. |
+| Twitter Cards | ✅ Done | All public pages have `twitter.card: "summary_large_image"`. |
+| Favicon + icons | ✅ Done | `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`. |
+| Heading hierarchy fixes | ✅ Done | `account-access.jsx` h3→h2 fix, `gating.jsx` added h1. |
+| Dashboard noindex | ✅ Done | All `/dashboard/*` pages have `robots: { index: false, follow: false }`. |
+
+### 12.2 What's Pending (requires database / Phase 4)
+
+| Feature | Blocked By | Notes |
+|---------|-----------|-------|
+| Product JSON-LD (schema.org/Product) | Database + deal slugs | Needs real price, availability, brand from DB. Template ready in SEO skill. |
+| `generateMetadata()` for `/deal/[slug]` | Dynamic routes | Currently static metadata; needs data fetching for per-deal titles/descriptions. |
+| `generateMetadata()` for `/supplier/[slug]` | Dynamic routes | Same as above for supplier pages. |
+| Dynamic sitemap URLs | Database | Deal and supplier URLs need to come from `getAllDeals()` / `getAllSuppliers()`. |
+| ItemList schema for listing pages | Database | Needs real deal/supplier data to populate `itemListElement`. |
+| Review/AggregateRating schema | Database | Needs real review data for supplier pages. |
+| Pagination `rel="next"` / `rel="prev"` | Server pagination (M2) | Components use client-side pagination; needs server-side wiring first. |
+| `noindex` on filter combinations | Dynamic routes | Add when filtered URLs become crawlable. |
+
+### 12.3 Structured Data Schema Map
+
+| Schema Type | Location | Status | Rich Result Enabled |
+|------------|----------|--------|-------------------|
+| Organization | `layout.tsx` (site-wide) | ✅ Done | Knowledge panel, logo in search |
+| WebSite + SearchAction | `layout.tsx` (site-wide) | ✅ Done | Sitelinks search box |
+| BreadcrumbList | `breadcrumb.jsx` (all sub-pages) | ✅ Done | Breadcrumb trail in SERP |
+| FAQPage | `pricing.jsx` (pricing page) | ✅ Done | Expandable FAQ in SERP |
+| Product | `/deal/[slug]` (deal pages) | ⏳ Phase 4 | Price, availability, rating in SERP |
+| ItemList | `/deals`, `/suppliers` (listings) | ⏳ Phase 4 | Carousel/list in SERP |
+| AggregateRating | `/supplier/[slug]` (supplier pages) | ⏳ Phase 4 | Star ratings in SERP |
+| ProfilePage | `/supplier/[slug]` (supplier pages) | ⏳ Phase 4 | Business profile in SERP |
+
+### 12.4 Inline PRODUCTION SEO Comment Locations
+
+Every Phase 4 SEO item has a corresponding `🔧 PRODUCTION SEO` comment in the source file where it will be implemented:
+
+| Item | File | Comment Contains |
+|------|------|-----------------|
+| Product JSON-LD | `src/components/phases/single-deal.jsx` | Full Product schema template with offers, brand, aggregateRating |
+| ProfilePage + AggregateRating JSON-LD | `src/components/phases/supplier-profile.jsx` | Full schema template with rating, address, categories |
+| ItemList JSON-LD (deals) | `src/components/phases/deal-cards.jsx` | Schema template with ListItem + Product child items |
+| ItemList JSON-LD (suppliers) | `src/components/phases/suppliers.jsx` | Schema template with ListItem + LocalBusiness child items |
+| Pagination rel="next"/"prev" (deals) | `src/components/phases/deal-cards.jsx` | Head link pattern with page bounds logic |
+| Pagination rel="next"/"prev" (suppliers) | `src/components/phases/suppliers.jsx` | Same pagination pattern |
+| `generateMetadata()` for deals | `src/app/deal/page.tsx` | Full async metadata function template |
+| `generateMetadata()` for suppliers | `src/app/supplier/page.tsx` | Full async metadata function template |
+| Dynamic sitemap URLs | `src/app/sitemap.ts` | Commented-out Prisma queries + sitemap index guidance |
+
+**To implement:** Search codebase for `🔧 PRODUCTION SEO` to find all inline templates ready for uncommenting/adaptation.
+
+### 12.5 Brand Copy for Meta Tags
+
+**Site-wide OG description (default):**
+> "Access the web's largest database of verified wholesale suppliers, liquidators, and dropshippers from the EU, UK, and North America. Thousands of live, in-margin deals you can resell at a profit on eBay, Amazon, Shopify, and beyond."
+
+**Social sharing placeholder image:** `/og-default.png` (1200×630px, WholesaleUp brand + value proposition)
+
+### 12.5 Base URL
+
+All canonical URLs and structured data use:
+```js
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://wholesaleup.com";
+```

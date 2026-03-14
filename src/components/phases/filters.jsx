@@ -20,21 +20,33 @@ import {
   LayoutGrid,
   List,
 } from "lucide-react";
+import StarRating from "@/components/shared/star-rating";
+import { SidebarPromoPanel } from "@/components/shared/collapsible-filter-panel";
+import { DetailedDealCard, PRODUCTS as DEAL_PRODUCTS } from "./deal-cards";
+import { FILTER_CATEGORIES } from "@/lib/categories";
+import { COUNTRIES as CANONICAL_COUNTRIES } from "@/lib/countries";
+import { useDemoAuth } from "@/components/shared/demo-auth-context";
 
 /* ─────────── Flag Emoji Helper ─────────── */
 // Flat flag images via flagcdn.com — ISO 3166-1 alpha-2 lowercase codes
-const FLAG_CODES = { UK: "gb", DE: "de", PL: "pl", NL: "nl", US: "us", ES: "es", IT: "it", FR: "fr", AU: "au" };
+// PRODUCTION (L8): Replace <img> with next/image Image component.
 function FlagImg({ code, size = 20 }) {
-  const iso = FLAG_CODES[code] || code?.toLowerCase();
+  const iso = code?.toLowerCase();
   if (!iso) return null;
   return <img src={`https://flagcdn.com/w40/${iso}.png`} alt={code} className="inline-block rounded-sm object-cover" style={{ width: size, height: size * 0.7 }} />;
 }
-// Backwards-compat: FLAGS object now returns JSX
+// FLAGS keyed by ISO alpha-2 code — returns JSX flag elements
 const FLAGS = Object.fromEntries(
-  Object.keys(FLAG_CODES).map((k) => [k, <FlagImg key={k} code={k} size={18} />])
+  CANONICAL_COUNTRIES.slice(0, 20).map((c) => [c.iso, <FlagImg key={c.iso} code={c.iso} size={18} />])
 );
 
-/* ─────────── Mock Data ─────────── */
+/* ─────────── Placeholder Data (H1) ─────────────────────────
+   PRODUCTION: Replace with API data:
+   - CATEGORIES    → GET /api/categories (nested with counts)
+   - Filter data is used for client-side faceted search.
+   SEED: prisma/seed.ts → seedCategories()
+   Consider fetching category tree on mount or via getStaticProps.
+   ─────────────────────────────────────────────────────────── */
 const POPULAR_SEARCHES = [
   "Sony Xperia",
   "Samsung Galaxy",
@@ -45,149 +57,7 @@ const POPULAR_SEARCHES = [
   "Nike",
 ];
 
-const CATEGORIES = [
-  {
-    id: "baby-products", label: "Baby Products", count: 4691,
-    children: [
-      { id: "baby-clothing-shoes", label: "Clothing & Shoes", count: 1200 },
-      { id: "baby-feeding-nursing", label: "Feeding & Nursing", count: 834 },
-      { id: "baby-toys-activity", label: "Toys & Activity", count: 1502 },
-      { id: "baby-pushchairs-prams", label: "Pushchairs & Prams", count: 389 },
-      { id: "baby-safety-health", label: "Safety & Health", count: 766 },
-    ],
-  },
-  {
-    id: "clothing", label: "Clothing", count: 14672,
-    children: [
-      { id: "clothing-mens", label: "Men's Clothing", count: 3845 },
-      { id: "clothing-womens", label: "Women's Clothing", count: 5062 },
-      { id: "clothing-childrens", label: "Children's Clothing", count: 2280 },
-      { id: "clothing-sportswear", label: "Sportswear", count: 1519 },
-      { id: "clothing-accessories", label: "Accessories", count: 1966 },
-    ],
-  },
-  {
-    id: "computing", label: "Computing", count: 2483,
-    children: [
-      { id: "computing-laptops", label: "Laptops & Notebooks", count: 618 },
-      { id: "computing-desktops", label: "Desktop PCs", count: 270 },
-      { id: "computing-tablets", label: "Tablets", count: 412 },
-      { id: "computing-components", label: "Components", count: 724 },
-      { id: "computing-peripherals", label: "Peripherals", count: 459 },
-    ],
-  },
-  {
-    id: "consumer-electronic", label: "Consumer Electronic", count: 3590,
-    children: [
-      { id: "ce-tv-cinema", label: "TV & Home Cinema", count: 914 },
-      { id: "ce-audio-hifi", label: "Audio & HiFi", count: 569 },
-      { id: "ce-cameras", label: "Cameras & Camcorders", count: 406 },
-      { id: "ce-smart-home", label: "Smart Home", count: 811 },
-      { id: "ce-wearable", label: "Wearable Tech", count: 890 },
-    ],
-  },
-  {
-    id: "health-beauty", label: "Health & Beauty", count: 5467,
-    children: [
-      { id: "hb-supplements", label: "Diet, Supplements, & Vitamins", count: 612 },
-      { id: "hb-hair-skin", label: "Hair & Skin Care", count: 834 },
-      { id: "hb-makeup", label: "Makeup & Cosmetics", count: 923 },
-      { id: "hb-manicure", label: "Manicure & Pedicure", count: 410 },
-      { id: "hb-natural", label: "Natural & Alternative Therapy", count: 389 },
-      { id: "hb-perfumes", label: "Perfumes & Fragrances", count: 1290 },
-      { id: "hb-personal", label: "Personal Care", count: 1009 },
-    ],
-  },
-  {
-    id: "home-garden", label: "Home & Garden", count: 9210,
-    children: [
-      { id: "hg-furniture", label: "Furniture", count: 2220 },
-      { id: "hg-kitchen", label: "Kitchen & Dining", count: 1812 },
-      { id: "hg-bedding", label: "Bedding & Linen", count: 1405 },
-      { id: "hg-garden-tools", label: "Garden Tools", count: 1093 },
-      { id: "hg-decor", label: "Home Decor", count: 2680 },
-    ],
-  },
-  {
-    id: "jewellery-watches", label: "Jewellery & Watches", count: 3178,
-    children: [
-      { id: "jw-rings", label: "Rings", count: 715 },
-      { id: "jw-necklaces", label: "Necklaces", count: 612 },
-      { id: "jw-watches", label: "Watches", count: 920 },
-      { id: "jw-earrings", label: "Earrings", count: 438 },
-      { id: "jw-bracelets", label: "Bracelets", count: 493 },
-    ],
-  },
-  {
-    id: "leisure-entertainment", label: "Leisure & Entertainment", count: 2890,
-    children: [
-      { id: "le-books", label: "Books & Magazines", count: 507 },
-      { id: "le-dvds", label: "DVDs & Blu-ray", count: 304 },
-      { id: "le-musical", label: "Musical Instruments", count: 416 },
-      { id: "le-board-games", label: "Board Games", count: 789 },
-      { id: "le-arts-crafts", label: "Arts & Crafts", count: 874 },
-    ],
-  },
-  {
-    id: "mobile-phones", label: "Mobile & Home Phones", count: 4267,
-    children: [
-      { id: "mp-smartphones", label: "Smartphones", count: 1320 },
-      { id: "mp-cases", label: "Phone Cases", count: 1145 },
-      { id: "mp-chargers", label: "Chargers & Cables", count: 728 },
-      { id: "mp-screen", label: "Screen Protectors", count: 415 },
-      { id: "mp-headphones", label: "Headphones", count: 659 },
-    ],
-  },
-  {
-    id: "office-business", label: "Office & Business", count: 1897,
-    children: [
-      { id: "ob-supplies", label: "Office Supplies", count: 618 },
-      { id: "ob-printers", label: "Printers & Ink", count: 207 },
-      { id: "ob-furniture", label: "Office Furniture", count: 345 },
-      { id: "ob-filing", label: "Filing & Storage", count: 412 },
-      { id: "ob-presentation", label: "Presentation", count: 315 },
-    ],
-  },
-  {
-    id: "police-auctions", label: "Police Auctions & Auction Houses", count: 823,
-    children: [
-      { id: "pa-lost-property", label: "Lost Property", count: 204 },
-      { id: "pa-seized", label: "Seized Goods", count: 286 },
-      { id: "pa-unclaimed", label: "Unclaimed Parcels", count: 173 },
-      { id: "pa-surplus", label: "Government Surplus", count: 160 },
-    ],
-  },
-  {
-    id: "sports-fitness", label: "Sports & Fitness", count: 3543,
-    children: [
-      { id: "sf-gym", label: "Gym Equipment", count: 811 },
-      { id: "sf-outdoor", label: "Outdoor Sports", count: 914 },
-      { id: "sf-team", label: "Team Sports", count: 608 },
-      { id: "sf-cycling", label: "Cycling", count: 546 },
-      { id: "sf-swimming", label: "Swimming", count: 664 },
-    ],
-  },
-  {
-    id: "surplus-stocklots", label: "Surplus & Stocklots", count: 6312,
-    children: [
-      { id: "ss-mixed", label: "Mixed Pallets", count: 907 },
-      { id: "ss-returns", label: "Customer Returns", count: 1412 },
-      { id: "ss-end-of-line", label: "End of Line", count: 1089 },
-      { id: "ss-overstock", label: "Overstock", count: 1615 },
-      { id: "ss-clearance", label: "Clearance", count: 1289 },
-    ],
-  },
-  {
-    id: "toys-games", label: "Toys & Games", count: 3498,
-    children: [
-      { id: "tg-action", label: "Action Figures", count: 608 },
-      { id: "tg-building", label: "Building Toys", count: 812 },
-      { id: "tg-dolls", label: "Dolls", count: 406 },
-      { id: "tg-educational", label: "Educational Toys", count: 915 },
-      { id: "tg-outdoor", label: "Outdoor Toys", count: 757 },
-    ],
-  },
-];
+const CATEGORIES = FILTER_CATEGORIES;
 
 // Helper: get all child IDs for a parent category
 function getChildIds(parentId) {
@@ -196,8 +66,11 @@ function getChildIds(parentId) {
 }
 
 // Helper: find parent category for a given child ID
+// Note: child IDs are in format "parentId--childId" per FILTER_CATEGORIES
 function findParentCategory(childId) {
-  return CATEGORIES.find((c) => c.children?.some((ch) => ch.id === childId));
+  // Extract parent ID from child ID (format: "parentId--childId")
+  const parentId = childId?.split("--")[0];
+  return parentId ? CATEGORIES.find((c) => c.id === parentId) : undefined;
 }
 
 // Helper: flat list of all category IDs (parents + children)
@@ -210,16 +83,12 @@ function getAllCategoryLabels() {
   return map;
 }
 
-const COUNTRIES = [
-  { code: "UK", name: "United Kingdom", count: 105247 },
-  { code: "DE", name: "Germany", count: 4757 },
-  { code: "PL", name: "Poland", count: 3923 },
-  { code: "NL", name: "Netherlands", count: 3872 },
-  { code: "US", name: "United States", count: 3841 },
-  { code: "ES", name: "Spain", count: 3015 },
-  { code: "IT", name: "Italy", count: 2530 },
-  { code: "FR", name: "France", count: 1890 },
-];
+/* ── Country filter: canonical ISO codes from /lib/countries.js ──
+   PRODUCTION: Replace demo counts with real counts from API. */
+const COUNTRY_DEMO_COUNTS = { gb: 105247, de: 4757, pl: 3923, nl: 3872, us: 3841, es: 3015, it: 2530, fr: 1890 };
+const COUNTRIES = CANONICAL_COUNTRIES
+  .filter((c) => COUNTRY_DEMO_COUNTS[c.iso])
+  .map((c) => ({ code: c.iso, name: c.label, count: COUNTRY_DEMO_COUNTS[c.iso] }));
 
 const GRADES = [
   { id: "new", label: "New" },
@@ -229,16 +98,40 @@ const GRADES = [
   { id: "refurbished", label: "Refurbished" },
 ];
 
-const BUSINESS_TYPES = [
-  { id: "wholesalers", label: "Wholesalers" },
-  { id: "distributors", label: "Distributors" },
-  { id: "importers", label: "Importers" },
-  { id: "manufacturers", label: "Manufacturers" },
-  { id: "dropshippers", label: "Dropshippers" },
-  { id: "liquidators", label: "Liquidators" },
-  { id: "agents", label: "Agents" },
-  { id: "trading-companies", label: "Trading Companies" },
-  { id: "other", label: "Other Suppliers" },
+/* ── Supplier Type filter: canonical values from SUPPLIER_TYPE_OPTIONS ── */
+const SUPPLIER_TYPES = [
+  { id: "manufacturer", label: "Manufacturer" },
+  { id: "brand-owner", label: "Brand Owner" },
+  { id: "private-label", label: "Private Label / White Label" },
+  { id: "wholesaler", label: "Wholesaler" },
+  { id: "distributor", label: "Distributor" },
+  { id: "importer", label: "Importer" },
+  { id: "exporter", label: "Exporter" },
+  { id: "trading-company", label: "Trading Company" },
+  { id: "liquidator", label: "Liquidator / Clearance" },
+  { id: "dropshipper", label: "Dropshipper" },
+  { id: "sourcing-agent", label: "Sourcing Agent" },
+  { id: "artisan-maker", label: "Artisan / Maker" },
+];
+
+const BUYER_TYPES = [
+  { id: "online-retailer", label: "Online Retailers" },
+  { id: "shop-retailer", label: "Shop / High Street Retailers" },
+  { id: "multi-chain", label: "Multi-Chain Retailers" },
+  { id: "marketplace-seller", label: "Marketplace Sellers" },
+  { id: "dropshipper", label: "Dropshippers" },
+  { id: "market-trader", label: "Market Traders" },
+  { id: "wholesaler-reseller", label: "Wholesalers / Resellers" },
+  { id: "distributor", label: "Distributors / Importers" },
+  { id: "supermarket", label: "Supermarket / Grocery" },
+  { id: "hospitality", label: "Hospitality / HoReCa" },
+  { id: "corporate-buyer", label: "Corporate / Procurement" },
+  { id: "franchisee", label: "Franchisees" },
+  { id: "charity-nonprofit", label: "Charities / Non-Profits" },
+  { id: "government", label: "Government / Public Sector" },
+  { id: "subscription-box", label: "Subscription Box Services" },
+  { id: "social-commerce", label: "Social Commerce Sellers" },
+  { id: "mail-order", label: "Mail Order / Catalogue" },
 ];
 
 const RATINGS = [
@@ -252,12 +145,15 @@ const RATINGS = [
    ═══════════════════════════════════════════════════ */
 function FilterSection({ title, defaultOpen = true, onClear, children }) {
   const [open, setOpen] = useState(defaultOpen);
+  const titleSlug = title.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <div className="border-b border-slate-100 last:border-b-0">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-4 py-3 text-left group"
+        aria-expanded={open}
+        aria-controls={`filter-section-${titleSlug}`}
       >
         <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
           {title}
@@ -281,33 +177,12 @@ function FilterSection({ title, defaultOpen = true, onClear, children }) {
           )}
         </div>
       </button>
-      {open && <div className="px-4 pb-3.5">{children}</div>}
+      {open && <div className="px-4 pb-3.5" id={`filter-section-${titleSlug}`}>{children}</div>}
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   STAR RATING DISPLAY
-   ═══════════════════════════════════════════════════ */
-function StarRating({ rating, size = 12 }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          size={size}
-          className={
-            i <= Math.floor(rating)
-              ? "fill-amber-400 text-amber-400"
-              : i - 0.5 <= rating
-              ? "fill-amber-400/50 text-amber-400"
-              : "text-slate-200"
-          }
-        />
-      ))}
-    </div>
-  );
-}
+/* StarRating — imported from @/components/shared/star-rating */
 
 /* ═══════════════════════════════════════════════════
    CHECKBOX ITEM
@@ -330,7 +205,7 @@ function CheckboxItem({ id, label, count, checked, onChange, prefix, highlighted
         {label}
       </span>
       {count !== undefined && (
-        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full ${highlighted ? "bg-blue-50 text-blue-600 font-medium" : "text-slate-400"}`}>
+        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-md ${highlighted ? "bg-blue-50 text-blue-600 font-medium" : "text-slate-400"}`}>
           {count.toLocaleString()}
         </span>
       )}
@@ -342,35 +217,66 @@ function CheckboxItem({ id, label, count, checked, onChange, prefix, highlighted
    PRICE RANGE SLIDER — Dual-handle range with inputs
    ═══════════════════════════════════════════════════ */
 const PRICE_MIN = 0;
-const PRICE_MAX = 10000;
+const PRICE_MAX_DEFAULT = 10000;
 
-function PriceRangeSlider({ filters, setFilters }) {
-  const minVal = filters.priceMin === "" ? PRICE_MIN : Number(filters.priceMin);
-  const maxVal = filters.priceMax === "" ? PRICE_MAX : Number(filters.priceMax);
-  const trackRef = useRef(null);
+function PriceRangeSlider({ filters, setFilters, maxPrice }) {
+  const PRICE_MAX = maxPrice || PRICE_MAX_DEFAULT;
+  // Local state for immediate UI feedback; debounced commit to actual filters
+  const [localMin, setLocalMin] = useState(filters.priceMin);
+  const [localMax, setLocalMax] = useState(filters.priceMax);
+  const debounceRef = useRef(null);
+
+  // Sync local state when filters change externally (e.g. Clear All)
+  useEffect(() => { setLocalMin(filters.priceMin); }, [filters.priceMin]);
+  useEffect(() => { setLocalMax(filters.priceMax); }, [filters.priceMax]);
+
+  const commitDebounced = useCallback((min, max) => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setFilters((p) => ({ ...p, priceMin: min, priceMax: max }));
+    }, 500);
+  }, [setFilters]);
+
+  // Cleanup on unmount
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
+
+  const minVal = localMin === "" ? PRICE_MIN : Number(localMin);
+  const maxVal = localMax === "" ? PRICE_MAX : Number(localMax);
 
   const getPercent = useCallback((val) =>
     ((val - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * 100
   , []);
 
   const handleMinInput = (e) => {
-    const val = e.target.value === "" ? "" : Math.min(Number(e.target.value), maxVal - 1);
-    setFilters((p) => ({ ...p, priceMin: val === "" ? "" : String(val) }));
+    const raw = e.target.value;
+    if (raw === "") { setLocalMin(""); commitDebounced("", localMax); return; }
+    const val = Math.min(Number(raw), maxVal - 1);
+    const str = String(val);
+    setLocalMin(str);
+    commitDebounced(str, localMax);
   };
 
   const handleMaxInput = (e) => {
-    const val = e.target.value === "" ? "" : Math.max(Number(e.target.value), minVal + 1);
-    setFilters((p) => ({ ...p, priceMax: val === "" ? "" : String(val) }));
+    const raw = e.target.value;
+    if (raw === "") { setLocalMax(""); commitDebounced(localMin, ""); return; }
+    const val = Math.max(Number(raw), minVal + 1);
+    const str = String(val);
+    setLocalMax(str);
+    commitDebounced(localMin, str);
   };
 
   const handleMinRange = (e) => {
     const val = Math.min(Number(e.target.value), maxVal - 1);
-    setFilters((p) => ({ ...p, priceMin: String(val) }));
+    const str = String(val);
+    setLocalMin(str);
+    commitDebounced(str, localMax);
   };
 
   const handleMaxRange = (e) => {
     const val = Math.max(Number(e.target.value), minVal + 1);
-    setFilters((p) => ({ ...p, priceMax: String(val) }));
+    const str = String(val);
+    setLocalMax(str);
+    commitDebounced(localMin, str);
   };
 
   const minPercent = getPercent(minVal);
@@ -381,34 +287,34 @@ function PriceRangeSlider({ filters, setFilters }) {
       {/* Min / Max inputs */}
       <div className="flex items-center gap-2 mb-4">
         <div className="flex-1">
-          <label className="text-[10px] font-semibold text-slate-400 uppercase mb-1 block">Min.</label>
+          <label className="text-xs font-semibold text-slate-400 uppercase mb-1 block">Min.</label>
           <input
             type="number"
-            value={filters.priceMin}
+            value={localMin}
             onChange={handleMinInput}
             placeholder="0"
             min={PRICE_MIN}
             max={PRICE_MAX}
-            className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
           />
         </div>
         <span className="text-slate-300 mt-4">–</span>
         <div className="flex-1">
-          <label className="text-[10px] font-semibold text-slate-400 uppercase mb-1 block">Max.</label>
+          <label className="text-xs font-semibold text-slate-400 uppercase mb-1 block">Max.</label>
           <input
             type="number"
-            value={filters.priceMax}
+            value={localMax}
             onChange={handleMaxInput}
-            placeholder="10000"
+            placeholder={String(PRICE_MAX)}
             min={PRICE_MIN}
             max={PRICE_MAX}
-            className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums"
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all tabular-nums shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
           />
         </div>
       </div>
 
       {/* Dual range slider */}
-      <div className="relative h-5 flex items-center" ref={trackRef}>
+      <div className="relative h-5 flex items-center">
         {/* Track background */}
         <div className="absolute w-full h-1 bg-slate-200 rounded-full" />
         {/* Active range (orange) */}
@@ -444,13 +350,17 @@ function PriceRangeSlider({ filters, setFilters }) {
 /* ═══════════════════════════════════════════════════
    FILTER SIDEBAR
    ═══════════════════════════════════════════════════ */
-function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = false, hidePrice = false, hideDropshipping = false, hideGrade = false, showBusinessType = false }) {
+function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = false, hidePrice = false, hideDropshipping = false, hideGrade = false, showBusinessType = false, showBuyerTypes = false, maxPrice }) {
   const [categorySearch, setCategorySearch] = useState("");
   const [countrySearch, setCountrySearch] = useState("");
 
-  const filteredCategories = CATEGORIES.filter((c) =>
-    c.label.toLowerCase().includes(categorySearch.toLowerCase())
-  );
+  const searchLower = categorySearch.toLowerCase();
+  const filteredCategories = categorySearch
+    ? CATEGORIES.filter((c) =>
+        c.label.toLowerCase().includes(searchLower) ||
+        c.children?.some((ch) => ch.label.toLowerCase().includes(searchLower))
+      )
+    : CATEGORIES;
   const filteredCountries = COUNTRIES.filter((c) =>
     c.name.toLowerCase().includes(countrySearch.toLowerCase())
   );
@@ -463,6 +373,20 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
         : [...prev[key], value],
     }));
   };
+
+  /* ── Check if any filter is active (for Clear All visibility) ── */
+  const hasActiveFilters =
+    filters.rating != null ||
+    filters.category != null ||
+    filters.subcategory != null ||
+    (filters.priceMin && filters.priceMin !== "") ||
+    (filters.priceMax && filters.priceMax !== "") ||
+    filters.countries.length > 0 ||
+    filters.dropshipping === true ||
+    filters.grades.length > 0 ||
+    (filters.supplierTypes?.length > 0) ||
+    (filters.buyerTypes?.length > 0) ||
+    (filters.keywords?.length > 0);
 
   return (
     <aside
@@ -478,6 +402,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
           <span className="text-sm font-bold text-slate-800">Filters</span>
         </div>
         <div className="flex items-center gap-2">
+          {hasActiveFilters && (
           <button
             onClick={() =>
               setFilters({
@@ -489,17 +414,20 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
                 countries: [],
                 dropshipping: false,
                 grades: [],
-                businessTypes: [],
-                keyword: "",
+                supplierTypes: [],
+                buyerTypes: [],
+                keywords: [],
               })
             }
             className="text-xs text-orange-500 hover:text-orange-600 font-semibold"
           >
             Clear All
           </button>
+          )}
           <button
             onClick={onClose}
             className="lg:hidden w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center"
+            aria-label="Close filters"
           >
             <X size={14} className="text-slate-600" />
           </button>
@@ -510,19 +438,31 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
         {/* ── Popular Searches ── */}
         <FilterSection title="Popular Searches">
           <div className="flex flex-wrap gap-1.5">
-            {POPULAR_SEARCHES.map((term) => (
-              <button
-                key={term}
-                onClick={() => setFilters((p) => ({ ...p, keyword: term }))}
-                className={`px-2.5 py-1.5 text-xs rounded-lg border transition-all ${
-                  filters.keyword === term
-                    ? "bg-orange-500 text-white border-orange-500 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:text-orange-600"
-                }`}
-              >
-                {term}
-              </button>
-            ))}
+            {POPULAR_SEARCHES.map((term) => {
+              const isActive = (filters.keywords || []).some((k) => (typeof k === "string" ? k : k.term) === term);
+              return (
+                <button
+                  key={term}
+                  onClick={() => setFilters((p) => {
+                    const prev = p.keywords || [];
+                    return {
+                      ...p,
+                      keywords: isActive
+                        ? prev.filter((k) => (typeof k === "string" ? k : k.term) !== term)
+                        : [...prev, { term, mode: "any" }],
+                    };
+                  })}
+                  className={`px-2.5 py-1.5 text-xs rounded-lg border transition-all flex items-center gap-1 ${
+                    isActive
+                      ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-orange-300 hover:text-orange-600"
+                  }`}
+                >
+                  {term}
+                  {isActive && <X size={11} className="ml-0.5 shrink-0" />}
+                </button>
+              );
+            })}
           </div>
         </FilterSection>
 
@@ -532,7 +472,7 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
           title="Rating"
           onClear={filters.rating ? () => setFilters((p) => ({ ...p, rating: null })) : undefined}
         >
-          <div className="space-y-0.5">
+          <div className="space-y-0.5" role="radiogroup" aria-label="Minimum rating">
             {RATINGS.map((r) => (
               <label
                 key={r.value}
@@ -547,6 +487,8 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
                     ? "bg-orange-50 border border-orange-200"
                     : "hover:bg-slate-50 border border-transparent"
                 }`}
+                role="radio"
+                aria-checked={filters.rating === r.value}
               >
                 {/* Custom radio circle */}
                 <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
@@ -629,45 +571,87 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
               value={categorySearch}
               onChange={(e) => setCategorySearch(e.target.value)}
               placeholder="Search categories..."
-              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all"
+              aria-label="Search categories"
+              className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
             />
           </div>
           <div className="space-y-0.5 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
-            {filteredCategories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() =>
-                  setFilters((p) => ({
-                    ...p,
-                    category: p.category === cat.id ? null : cat.id,
-                    subcategory: p.category === cat.id ? null : p.subcategory,
-                  }))
-                }
-                className="w-full flex items-center justify-between py-1.5 text-left group"
-              >
-                <span className={`text-sm transition-colors ${
-                  filters.category === cat.id
-                    ? "text-orange-500 font-semibold"
-                    : "text-slate-600 group-hover:text-orange-500"
-                }`}>
-                  {cat.label}
-                </span>
-                <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full ${
-                  filters.category === cat.id
-                    ? "bg-blue-50 text-blue-600 font-medium"
-                    : "text-slate-400"
-                }`}>
-                  {cat.count.toLocaleString()}
-                </span>
-              </button>
-            ))}
+            {filteredCategories.map((cat) => {
+              // When searching, show matching subcategories inline under their parent
+              const matchingSubs = categorySearch && cat.children
+                ? cat.children.filter((ch) => ch.label.toLowerCase().includes(searchLower))
+                : [];
+              const parentMatches = cat.label.toLowerCase().includes(searchLower);
+              return (
+                <div key={cat.id}>
+                  <button
+                    onClick={() =>
+                      setFilters((p) => ({
+                        ...p,
+                        category: p.category === cat.id ? null : cat.id,
+                        subcategory: null,
+                      }))
+                    }
+                    className="w-full flex items-center justify-between py-1.5 text-left group"
+                  >
+                    <span className={`text-sm transition-colors ${
+                      filters.category === cat.id
+                        ? "text-orange-500 font-semibold"
+                        : "text-slate-600 group-hover:text-orange-500"
+                    }`}>
+                      {cat.label}
+                    </span>
+                    <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full ${
+                      filters.category === cat.id
+                        ? "bg-blue-50 text-blue-600 font-medium"
+                        : "text-slate-400"
+                    }`}>
+                      {cat.count.toLocaleString()}
+                    </span>
+                  </button>
+                  {/* Show matching subcategories when searching */}
+                  {categorySearch && !parentMatches && matchingSubs.length > 0 && (
+                    <div className="pl-4 space-y-0.5">
+                      {matchingSubs.map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() =>
+                            setFilters((p) => ({
+                              ...p,
+                              category: cat.id,
+                              subcategory: p.subcategory === sub.id ? null : sub.id,
+                            }))
+                          }
+                          className="w-full flex items-center justify-between py-1 text-left group"
+                        >
+                          <span className={`text-xs transition-colors ${
+                            filters.subcategory === sub.id
+                              ? "text-orange-500 font-semibold"
+                              : "text-slate-500 group-hover:text-orange-500"
+                          }`}>
+                            {sub.label}
+                          </span>
+                          <span className={`text-[10px] tabular-nums px-1.5 py-0.5 rounded-full ${
+                            filters.subcategory === sub.id
+                              ? "bg-blue-50 text-blue-600 font-medium"
+                              : "text-slate-400"
+                          }`}>
+                            {sub.count.toLocaleString()}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </FilterSection>
 
         {/* ── Price Range ── */}
         {!hidePrice && (
           <FilterSection title="Price">
-            <PriceRangeSlider filters={filters} setFilters={setFilters} />
+            <PriceRangeSlider filters={filters} setFilters={setFilters} maxPrice={maxPrice} />
           </FilterSection>
         )}
 
@@ -690,7 +674,8 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
               value={countrySearch}
               onChange={(e) => setCountrySearch(e.target.value)}
               placeholder="Search countries..."
-              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all"
+              aria-label="Search countries"
+              className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none transition-all shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
             />
           </div>
           <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
@@ -711,22 +696,23 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
         {/* ── Dropshipping ── */}
         {!hideDropshipping && (
           <FilterSection title="Dropshipping">
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <div
-                className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                  filters.dropshipping ? "bg-orange-500" : "bg-slate-200"
+            <label className="flex items-center gap-2.5 py-1.5 cursor-pointer group">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={filters.dropshipping}
+                onClick={() => setFilters((p) => ({ ...p, dropshipping: !p.dropshipping }))}
+                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 ${
+                  filters.dropshipping ? "bg-orange-500" : "bg-slate-300"
                 }`}
-                onClick={() =>
-                  setFilters((p) => ({ ...p, dropshipping: !p.dropshipping }))
-                }
               >
-                <div
-                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
-                    filters.dropshipping ? "translate-x-4" : "translate-x-0.5"
+                <span
+                  className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
+                    filters.dropshipping ? "translate-x-[18px]" : "translate-x-[3px]"
                   }`}
                 />
-              </div>
-              <span className="text-sm text-slate-600">Dropshipped Deals</span>
+              </button>
+              <span className="text-sm text-slate-600 group-hover:text-slate-900">Dropshipping Only</span>
             </label>
           </FilterSection>
         )}
@@ -755,24 +741,48 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
           </FilterSection>
         )}
 
-        {/* ── Business Type ── */}
+        {/* ── Supplier Type ── */}
         {showBusinessType && (
           <FilterSection
-            title="Business Type"
+            title="Supplier Type"
             onClear={
-              (filters.businessTypes?.length > 0)
-                ? () => setFilters((p) => ({ ...p, businessTypes: [] }))
+              (filters.supplierTypes?.length > 0)
+                ? () => setFilters((p) => ({ ...p, supplierTypes: [] }))
                 : undefined
             }
           >
             <div className="space-y-0.5">
-              {BUSINESS_TYPES.map((bt) => (
+              {SUPPLIER_TYPES.map((bt) => (
                 <CheckboxItem
                   key={bt.id}
                   id={`bt-${bt.id}`}
                   label={bt.label}
-                  checked={(filters.businessTypes || []).includes(bt.id)}
-                  onChange={() => toggleArrayFilter("businessTypes", bt.id)}
+                  checked={(filters.supplierTypes || []).includes(bt.id)}
+                  onChange={() => toggleArrayFilter("supplierTypes", bt.id)}
+                />
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {/* ── Buyers Served ── */}
+        {showBuyerTypes && (
+          <FilterSection
+            title="Buyers Served"
+            onClear={
+              (filters.buyerTypes?.length > 0)
+                ? () => setFilters((p) => ({ ...p, buyerTypes: [] }))
+                : undefined
+            }
+          >
+            <div className="space-y-0.5">
+              {BUYER_TYPES.map((bt) => (
+                <CheckboxItem
+                  key={bt.id}
+                  id={`buyer-${bt.id}`}
+                  label={bt.label}
+                  checked={(filters.buyerTypes || []).includes(bt.id)}
+                  onChange={() => toggleArrayFilter("buyerTypes", bt.id)}
                 />
               ))}
             </div>
@@ -785,12 +795,15 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
             <Flame size={12} className="text-orange-500" />
             Exclusive Deals on Clothing & Fashion
           </h4>
-          <p className="text-[11px] text-slate-500 leading-relaxed">
+          <p className="text-xs text-slate-500 leading-relaxed">
             Find unbeatable deals on high-quality clothing and fashion items,
             including trendy apparel, footwear, accessories, and seasonal
             collections.
           </p>
         </div>
+
+        {/* ── Tier-aware upgrade promo panel ── */}
+        <SidebarPromoPanel />
       </div>
       <style>{`
         .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(203,213,225,0.5) transparent; }
@@ -809,13 +822,37 @@ function FilterSidebar({ filters, setFilters, isOpen, onClose, hideRating = fals
 function ActiveFilterChips({ filters, setFilters, searchMode }) {
   const chips = [];
 
-  if (filters.keyword) {
+  (filters.keywords || []).forEach((kw) => {
+    /* keywords are { term, mode } objects or legacy strings */
+    const term = typeof kw === "string" ? kw : kw.term;
+    const mode = typeof kw === "string" ? (searchMode || "any") : kw.mode;
     chips.push({
-      key: "keyword",
-      label: filters.keyword,
+      key: `keyword-${mode}-${term}`,
+      label: term,
       type: "keyword",
-      prefix: searchMode === "exact" ? "exact:" : searchMode === "all" ? "all:" : null,
-      onRemove: () => setFilters((p) => ({ ...p, keyword: "" })),
+      prefix: mode === "exact" ? "exact" : mode === "all" ? "all" : null,
+      onRemove: () => setFilters((p) => ({
+        ...p,
+        keywords: (p.keywords || []).filter((k) =>
+          typeof k === "string" ? k !== term : !(k.term === term && k.mode === mode)
+        ),
+      })),
+    });
+  });
+  if (filters.priceMin) {
+    chips.push({
+      key: "priceMin",
+      label: `Min: ${filters.priceMin}`,
+      type: "price",
+      onRemove: () => setFilters((p) => ({ ...p, priceMin: "" })),
+    });
+  }
+  if (filters.priceMax) {
+    chips.push({
+      key: "priceMax",
+      label: `Max: ${filters.priceMax}`,
+      type: "price",
+      onRemove: () => setFilters((p) => ({ ...p, priceMax: "" })),
     });
   }
   if (filters.rating) {
@@ -889,17 +926,31 @@ function ActiveFilterChips({ filters, setFilters, searchMode }) {
       onRemove: () => setFilters((p) => ({ ...p, dropshipping: false })),
     });
   }
-  (filters.businessTypes || []).forEach((btId) => {
-    const bt = BUSINESS_TYPES.find((b) => b.id === btId);
+  (filters.supplierTypes || []).forEach((btId) => {
+    const bt = SUPPLIER_TYPES.find((b) => b.id === btId);
     if (bt)
       chips.push({
         key: `bt-${btId}`,
         label: bt.label,
-        type: "businessType",
+        type: "supplierType",
         onRemove: () =>
           setFilters((p) => ({
             ...p,
-            businessTypes: (p.businessTypes || []).filter((b) => b !== btId),
+            supplierTypes: (p.supplierTypes || []).filter((b) => b !== btId),
+          })),
+      });
+  });
+  (filters.buyerTypes || []).forEach((btId) => {
+    const bt = BUYER_TYPES.find((b) => b.id === btId);
+    if (bt)
+      chips.push({
+        key: `buyer-${btId}`,
+        label: bt.label,
+        type: "buyerType",
+        onRemove: () =>
+          setFilters((p) => ({
+            ...p,
+            buyerTypes: (p.buyerTypes || []).filter((b) => b !== btId),
           })),
       });
   });
@@ -907,13 +958,15 @@ function ActiveFilterChips({ filters, setFilters, searchMode }) {
   if (chips.length === 0) return null;
 
   const chipColors = {
-    keyword: "bg-violet-100 text-violet-700 border-violet-200",
+    keyword: "bg-blue-50 text-blue-700 border-blue-200",
+    price: "bg-cyan-50 text-cyan-700 border-cyan-200",
     rating: "bg-amber-50 text-amber-700 border-amber-200",
     category: "bg-emerald-50 text-emerald-700 border-emerald-200",
     country: "bg-orange-50 text-orange-700 border-orange-200",
-    grade: "bg-orange-50 text-orange-700 border-orange-200",
-    dropshipping: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    businessType: "bg-blue-50 text-blue-700 border-blue-200",
+    grade: "bg-rose-50 text-rose-700 border-rose-200",
+    dropshipping: "bg-teal-50 text-teal-700 border-teal-200",
+    supplierType: "bg-rose-50 text-rose-700 border-rose-200",
+    buyerType: "bg-violet-50 text-violet-700 border-violet-200",
   };
 
   return (
@@ -921,10 +974,10 @@ function ActiveFilterChips({ filters, setFilters, searchMode }) {
       {chips.map((chip) => (
         <span
           key={chip.key}
-          className={`inline-flex items-center gap-0 rounded-full text-xs font-medium border overflow-hidden ${chipColors[chip.type]}`}
+          className={`inline-flex items-center gap-0 rounded-md text-xs font-medium border overflow-hidden ${chipColors[chip.type]}`}
         >
           {chip.prefix && (
-            <span className="px-2 py-1 bg-orange-500 text-white text-[10px] font-bold rounded-l-full">
+            <span className="px-2 py-1 bg-orange-500 text-white text-[10px] font-bold rounded-l-md">
               {chip.prefix}
             </span>
           )}
@@ -934,6 +987,7 @@ function ActiveFilterChips({ filters, setFilters, searchMode }) {
             <button
               onClick={chip.onRemove}
               className="ml-0.5 w-3.5 h-3.5 rounded-full hover:bg-black/10 flex items-center justify-center transition-colors"
+              aria-label={`Remove ${chip.label} filter`}
             >
               <X size={9} />
             </button>
@@ -951,8 +1005,8 @@ function ActiveFilterChips({ filters, setFilters, searchMode }) {
             countries: [],
             dropshipping: false,
             grades: [],
-            businessTypes: [],
-            keyword: "",
+            supplierTypes: [],
+            keywords: [],
           })
         }
         className="text-xs text-red-500 hover:text-red-600 font-semibold ml-1"
@@ -967,11 +1021,14 @@ function ActiveFilterChips({ filters, setFilters, searchMode }) {
    FAVOURITE + SUBSCRIBE BUTTONS
    ═══════════════════════════════════════════════════ */
 function FavouriteSubscribeButtons() {
+  const { isLoggedIn } = useDemoAuth();
   const [faved, setFaved] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState(null); // "fav" | "sub" | null
+  const openRegisterModal = () => window.dispatchEvent(new CustomEvent("open-auth-modal", { detail: { tab: "register" } }));
 
   const handleFav = () => {
+    if (!isLoggedIn) { openRegisterModal(); return; }
     if (faved) {
       // Unfavouriting also unsubscribes
       setFaved(false);
@@ -982,6 +1039,7 @@ function FavouriteSubscribeButtons() {
   };
 
   const handleSub = () => {
+    if (!isLoggedIn) { openRegisterModal(); return; }
     setSubscribed(!subscribed);
   };
 
@@ -1069,12 +1127,30 @@ function SearchToolbar({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const sortOptions = [
-    { value: "latest", label: "Latest Date of Publication" },
-    { value: "price-asc", label: "Price: Low to High" },
-    { value: "price-desc", label: "Price: High to Low" },
-    { value: "popular", label: "Most Popular" },
+  // preferred: the most useful default direction — its arrow renders first (left) and darker
+  const sortMetrics = [
+    { key: "best-match", label: "Best Match", hasDirection: false },
+    { key: "date", label: "Date Added", hasDirection: true, preferred: "desc" },
+    { key: "markup", label: "%Markup", hasDirection: true, preferred: "desc" },
+    { key: "price", label: "Wholesale Price", hasDirection: true, preferred: "asc" },
+    { key: "moq", label: "Minimum Quantity", hasDirection: true, preferred: "asc" },
+    { key: "profit", label: "Gross Profit", hasDirection: true, preferred: "desc" },
+    { key: "rrp", label: "RRP", hasDirection: true, preferred: "desc" },
+    { key: "discount", label: "Discount %", hasDirection: true, preferred: "desc" },
+    { key: "units", label: "Units per Case", hasDirection: true, preferred: "asc" },
   ];
+
+  // Derive current metric and direction from sortBy value (e.g. "markup-desc" → metric:"markup", dir:"desc")
+  const activeMetric = sortBy === "best-match" ? "best-match" : sortBy.replace(/-(asc|desc)$/, "");
+  const activeDir = sortBy === "best-match" ? null : sortBy.endsWith("-asc") ? "asc" : "desc";
+
+  // For the button label, build a readable string
+  const activeSortLabel = (() => {
+    const m = sortMetrics.find((s) => s.key === activeMetric);
+    if (!m) return "Best Match";
+    if (!m.hasDirection) return m.label;
+    return `${m.label} ${activeDir === "asc" ? "\u2191" : "\u2193"}`;
+  })();
 
   return (
     <div className="space-y-3">
@@ -1083,7 +1159,7 @@ function SearchToolbar({
         {/* Left: title + description */}
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-extrabold text-slate-900">{title} <span className="text-base font-semibold text-slate-400">({totalCount.toLocaleString()} deals)</span></h1>
-          <h2 className="text-[15px] font-normal text-slate-500 mt-1 leading-relaxed">
+          <h2 className="text-sm font-normal text-slate-500 mt-1 leading-relaxed">
             Discover in used and wholesale suppliers that fit your business needs. Find top-quality accessories, made-to-measure goods for brand and own-brand products at competitive wholesale prices. We connect you with reliable UK-based sources to optimise your inventory and{" "}
             {descExpanded ? (
               <>
@@ -1107,7 +1183,7 @@ function SearchToolbar({
             <button
               key={mode}
               onClick={() => setSearchMode(mode.toLowerCase())}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+              className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-all ${
                 searchMode === mode.toLowerCase()
                   ? "bg-white text-orange-600 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -1130,16 +1206,36 @@ function SearchToolbar({
             onChange={(e) => setInlineSearch(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && inlineSearch.trim()) {
-                setFilters((p) => ({ ...p, keyword: inlineSearch.trim() }));
+                const term = inlineSearch.trim();
+                const newKeyword = { term, mode: searchMode || "any" };
+                setFilters((p) => {
+                  const prev = p.keywords || [];
+                  const exists = prev.some((k) =>
+                    (typeof k === "string" ? k : k.term) === term &&
+                    (typeof k === "string" ? "any" : k.mode) === newKeyword.mode
+                  );
+                  return exists ? p : { ...p, keywords: [...prev, newKeyword] };
+                });
+                setInlineSearch("");
               }
             }}
             placeholder="Search within these results..."
-            className="w-full pl-9 pr-9 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
+            className="w-full pl-9 pr-9 py-2 text-sm border border-slate-200 rounded-lg bg-white focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
           />
           <button
             onClick={() => {
               if (inlineSearch.trim()) {
-                setFilters((p) => ({ ...p, keyword: inlineSearch.trim() }));
+                const term = inlineSearch.trim();
+                const newKeyword = { term, mode: searchMode || "any" };
+                setFilters((p) => {
+                  const prev = p.keywords || [];
+                  const exists = prev.some((k) =>
+                    (typeof k === "string" ? k : k.term) === term &&
+                    (typeof k === "string" ? "any" : k.mode) === newKeyword.mode
+                  );
+                  return exists ? p : { ...p, keywords: [...prev, newKeyword] };
+                });
+                setInlineSearch("");
               }
             }}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all"
@@ -1189,11 +1285,14 @@ function SearchToolbar({
           <button
             onClick={() => setSortOpen(!sortOpen)}
             className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+            aria-haspopup="listbox"
+            aria-expanded={sortOpen}
+            aria-label="Sort by"
           >
             <ArrowUpDown size={14} />
             <span className="hidden sm:inline text-xs font-medium">Sort:</span>
-            <span className="text-xs font-semibold text-slate-800 max-w-[140px] truncate">
-              {sortOptions.find((o) => o.value === sortBy)?.label}
+            <span className="text-xs font-semibold text-slate-800 max-w-[160px] truncate">
+              {activeSortLabel}
             </span>
             <ChevronDown
               size={12}
@@ -1203,23 +1302,63 @@ function SearchToolbar({
             />
           </button>
           {sortOpen && (
-            <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 min-w-[220px]">
-              {sortOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => {
-                    setSortBy(opt.value);
-                    setSortOpen(false);
-                  }}
-                  className={`w-full text-left px-3.5 py-2 text-xs transition-colors ${
-                    sortBy === opt.value
-                      ? "bg-orange-50 text-orange-700 font-semibold"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 min-w-[240px]" role="listbox">
+              {sortMetrics.map((metric) => {
+                const isActive = activeMetric === metric.key;
+                return (
+                  <div
+                    key={metric.key}
+                    className={`flex items-center justify-between px-3.5 py-2 text-sm transition-colors ${
+                      isActive ? "bg-orange-50" : "hover:bg-slate-50"
+                    }`}
+                  >
+                    {metric.hasDirection ? (() => {
+                      const first = metric.preferred || "desc";
+                      const second = first === "desc" ? "asc" : "desc";
+                      const dirs = [first, second];
+                      return (
+                        <>
+                          <span className={isActive ? "text-orange-700 font-semibold" : "text-slate-600"}>{metric.label}</span>
+                          <span className="flex items-center gap-0.5 ml-3">
+                            {dirs.map((dir) => {
+                              const isActiveDir = isActive && activeDir === dir;
+                              const isPreferred = dir === first;
+                              const Icon = dir === "asc" ? ChevronUp : ChevronDown;
+                              return (
+                                <button
+                                  key={dir}
+                                  onClick={() => { setSortBy(`${metric.key}-${dir}`); setSortOpen(false); }}
+                                  className={`p-1 rounded transition-colors ${
+                                    isActiveDir
+                                      ? "text-orange-600 bg-orange-100"
+                                      : isPreferred
+                                        ? "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                                        : "text-slate-300 hover:text-slate-600 hover:bg-slate-100"
+                                  }`}
+                                  role="option"
+                                  aria-selected={isActiveDir}
+                                  aria-label={`${metric.label} ${dir === "asc" ? "ascending" : "descending"}`}
+                                >
+                                  <Icon size={14} />
+                                </button>
+                              );
+                            })}
+                          </span>
+                        </>
+                      );
+                    })() : (
+                      <button
+                        onClick={() => { setSortBy(metric.key); setSortOpen(false); }}
+                        className={`w-full text-left ${isActive ? "text-orange-700 font-semibold" : "text-slate-600"}`}
+                        role="option"
+                        aria-selected={isActive}
+                      >
+                        {metric.label}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1234,17 +1373,30 @@ function SearchToolbar({
 /* ═══════════════════════════════════════════════════
    PAGINATION
    ═══════════════════════════════════════════════════ */
-function Pagination({ total, page, setPage, perPage, setPerPage }) {
+function Pagination({ total, page, setPage, perPage, setPerPage, buildPageHref }) {
   const totalPages = Math.ceil(total / perPage);
   const [goToPage, setGoToPage] = useState("");
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePageClick = (e, newPage) => {
+    e.preventDefault();
+    setPage(newPage);
+    scrollToTop();
+  };
 
   const handleGoTo = () => {
     const p = parseInt(goToPage);
     if (p >= 1 && p <= totalPages) {
       setPage(p);
       setGoToPage("");
+      scrollToTop();
     }
   };
+
+  const pageHref = (n) => (buildPageHref ? buildPageHref(n) : "#");
 
   return (
     <div className="flex items-center justify-between flex-wrap gap-3 py-5 border-t border-slate-100">
@@ -1253,14 +1405,16 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
         <span className="text-sm text-slate-500">
           Total deals: <strong className="text-slate-700">{total.toLocaleString()}</strong>
         </span>
-        <div className="flex items-center gap-1.5">
+        <div className="relative inline-flex items-center">
           <select
             value={perPage}
             onChange={(e) => {
               setPerPage(Number(e.target.value));
               setPage(1);
+              scrollToTop();
             }}
-            className="px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:border-orange-300 outline-none cursor-pointer"
+            aria-label="Results per page"
+            className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-600 focus:border-orange-300 outline-none cursor-pointer shadow-[0px_2px_4px_rgba(0,0,0,0.1)] hover:shadow-[0px_3px_6px_rgba(0,0,0,0.12)]"
           >
             {[9, 18, 27, 36].map((n) => (
               <option key={n} value={n}>
@@ -1268,18 +1422,26 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
               </option>
             ))}
           </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
         </div>
       </div>
 
       {/* Right: Page Navigation */}
       <div className="flex items-center gap-1.5">
-        <button
-          onClick={() => setPage(Math.max(1, page - 1))}
-          disabled={page === 1}
-          className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
+        {page > 1 ? (
+          <a
+            href={pageHref(page - 1)}
+            onClick={(e) => handlePageClick(e, Math.max(1, page - 1))}
+            className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={16} />
+          </a>
+        ) : (
+          <span className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 opacity-40 cursor-default" aria-disabled="true">
+            <ChevronLeft size={16} />
+          </span>
+        )}
 
         {/* Page Numbers */}
         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1293,28 +1455,41 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
           } else {
             pageNum = page - 2 + i;
           }
-          return (
-            <button
+          const isCurrent = page === pageNum;
+          return isCurrent ? (
+            <span
               key={pageNum}
-              onClick={() => setPage(pageNum)}
-              className={`w-9 h-9 rounded-lg text-sm font-semibold transition-all ${
-                page === pageNum
-                  ? "bg-orange-500 text-white shadow-sm"
-                  : "bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600 hover:shadow-sm"
-              }`}
+              className="w-9 h-9 rounded-lg text-sm font-semibold bg-orange-500 text-white shadow-sm flex items-center justify-center"
+              aria-current="page"
             >
               {pageNum}
-            </button>
+            </span>
+          ) : (
+            <a
+              key={pageNum}
+              href={pageHref(pageNum)}
+              onClick={(e) => handlePageClick(e, pageNum)}
+              className="w-9 h-9 rounded-lg text-sm font-semibold bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600 hover:shadow-sm transition-all flex items-center justify-center"
+            >
+              {pageNum}
+            </a>
           );
         })}
 
-        <button
-          onClick={() => setPage(Math.min(totalPages, page + 1))}
-          disabled={page === totalPages}
-          className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-colors"
-        >
-          <ChevronRight size={16} />
-        </button>
+        {page < totalPages ? (
+          <a
+            href={pageHref(page + 1)}
+            onClick={(e) => handlePageClick(e, Math.min(totalPages, page + 1))}
+            className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors"
+            aria-label="Next page"
+          >
+            <ChevronRight size={16} />
+          </a>
+        ) : (
+          <span className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 opacity-40 cursor-default" aria-disabled="true">
+            <ChevronRight size={16} />
+          </span>
+        )}
 
         {/* Go To */}
         <div className="flex items-center gap-1.5 ml-3">
@@ -1325,7 +1500,7 @@ function Pagination({ total, page, setPage, perPage, setPerPage }) {
             onChange={(e) => setGoToPage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleGoTo()}
             placeholder="Page"
-            className="w-20 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-center tabular-nums focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none"
+            className="w-20 px-2.5 py-1.5 text-sm border border-slate-200 rounded-lg text-center tabular-nums focus:border-orange-300 focus:ring-1 focus:ring-orange-100 outline-none shadow-[inset_2px_2px_4px_rgba(0,0,0,0.15)]"
           />
         </div>
       </div>
@@ -1382,227 +1557,10 @@ function PlaceholderDealCard({ index }) {
 export { FilterSidebar, SearchToolbar, Pagination, ActiveFilterChips, TrendingBanner, PlaceholderDealCard, StarRating };
 
 /* ═══════════════════════════════════════════════════
-   MAIN DEMO — Phase 2 Full Layout
+   DEPRECATED — Standalone /filters demo page removed.
+   Filters are integrated into /deals and /suppliers.
+   Kept as no-op default export for any stale imports.
    ═══════════════════════════════════════════════════ */
 export default function Phase2FilterSidebar() {
-  const [filters, setFilters] = useState({
-    rating: null,
-    category: null,
-    subcategory: null,
-    priceMin: "",
-    priceMax: "",
-    countries: [],
-    dropshipping: false,
-    grades: [],
-    businessTypes: [],
-    keyword: "",
-  });
-  const [sortBy, setSortBy] = useState("latest");
-  const [searchMode, setSearchMode] = useState("any");
-  const [inlineSearch, setInlineSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(9);
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [viewMode, setViewMode] = useState("deals"); // deals or suppliers
-
-  // Count active filters for the badge
-  const activeFilterCount =
-    (filters.rating ? 1 : 0) +
-    (filters.category ? 1 : 0) +
-    (filters.subcategory ? 1 : 0) +
-    filters.countries.length +
-    filters.grades.length +
-    (filters.businessTypes || []).length +
-    (filters.dropshipping ? 1 : 0) +
-    (filters.keyword ? 1 : 0) +
-    (filters.priceMin ? 1 : 0) +
-    (filters.priceMax ? 1 : 0);
-
-  return (
-    <div
-      className="min-h-screen bg-slate-50"
-      style={{ fontFamily: "'DM Sans', 'Outfit', sans-serif" }}
-    >
-      {/* Simple Header for Demo */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center">
-              <Tag size={14} className="text-white" />
-            </div>
-            <span className="text-base font-extrabold text-slate-900 tracking-tight">
-              Wholesale<span className="text-orange-500">Up</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode("deals")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                viewMode === "deals"
-                  ? "bg-orange-100 text-orange-700"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              Deals View
-            </button>
-            <button
-              onClick={() => setViewMode("suppliers")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                viewMode === "suppliers"
-                  ? "bg-orange-100 text-orange-700"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              Suppliers View
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Phase Info Banner */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-            <SlidersHorizontal size={18} className="text-orange-500" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-sm font-bold text-slate-800">
-              Phase 2 — Filter Sidebar + Toolbar + Pagination
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              All filter sections are interactive. Try selecting filters to see
-              chips appear, change sort order, toggle mobile filter view, and
-              navigate pages.
-              {activeFilterCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">
-                  {activeFilterCount} active filter
-                  {activeFilterCount !== 1 && "s"}
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Layout: Sidebar + Content */}
-        <div className="flex gap-6 items-start">
-          {/* Filter Sidebar */}
-          <FilterSidebar
-            filters={filters}
-            setFilters={setFilters}
-            isOpen={mobileFilterOpen}
-            onClose={() => setMobileFilterOpen(false)}
-          />
-
-          {/* Content Area */}
-          <div className="flex-1 min-w-0">
-            {/* Toolbar */}
-            <SearchToolbar
-              title={
-                viewMode === "deals" ? "Deals" : "Wholesale Suppliers"
-              }
-              totalCount={4691}
-              filters={filters}
-              setFilters={setFilters}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              searchMode={searchMode}
-              setSearchMode={setSearchMode}
-              inlineSearch={inlineSearch}
-              setInlineSearch={setInlineSearch}
-              onToggleMobileFilter={() =>
-                setMobileFilterOpen(!mobileFilterOpen)
-              }
-            />
-
-            {/* Trending Banner */}
-            <div className="mt-4">
-              <TrendingBanner />
-            </div>
-
-            {/* Content Grid — Placeholder cards */}
-            <div
-              className={
-                viewMode === "deals"
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-                  : "space-y-4"
-              }
-            >
-              {viewMode === "deals" ? (
-                Array.from({ length: perPage }, (_, i) => (
-                  <PlaceholderDealCard key={i} index={i} />
-                ))
-              ) : (
-                Array.from({ length: 3 }, (_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-orange-200 transition-all"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-                        <Tag size={24} className="text-slate-300" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-slate-800">
-                            Supplier Name Placeholder
-                          </h3>
-                          <FlagImg code="UK" size={16} />
-                          <span className="text-xs text-slate-500">
-                            United Kingdom
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 mb-2">
-                          <StarRating rating={5} size={11} />
-                          <span className="text-xs text-slate-400 ml-1">
-                            5.0
-                          </span>
-                        </div>
-                        <div className="h-2.5 bg-slate-100 rounded-full w-full mb-1.5" />
-                        <div className="h-2.5 bg-slate-100 rounded-full w-3/4 mb-1.5" />
-                        <div className="h-2.5 bg-slate-100 rounded-full w-1/2" />
-                        <div className="flex gap-2 mt-3">
-                          <button className="px-3 py-1.5 text-xs font-semibold text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors">
-                            Call Now
-                          </button>
-                          <button className="px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 rounded-lg hover:bg-orange-600 transition-colors">
-                            Send Enquiry
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Pagination */}
-            <Pagination
-              total={897}
-              page={page}
-              setPage={setPage}
-              perPage={perPage}
-              setPerPage={setPerPage}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile filter overlay backdrop */}
-      {mobileFilterOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-          onClick={() => setMobileFilterOpen(false)}
-        />
-      )}
-
-      <style>{`
-        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(203,213,225,0.5) transparent; }
-        .custom-scrollbar::-webkit-scrollbar { width: 2px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(203,213,225,0.6); border-radius: 2px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.7); }
-      `}</style>
-    </div>
-  );
+  return null;
 }
