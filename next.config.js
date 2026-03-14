@@ -5,6 +5,11 @@ const isDev = process.env.NODE_ENV === "development";
 const nextConfig = {
   reactStrictMode: true,
 
+  /* ── Skip ESLint during Vercel builds (run locally instead) ── */
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   /* ── next/image: whitelist external image domains ────────── */
   images: {
     remotePatterns: [
