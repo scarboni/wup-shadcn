@@ -56,7 +56,6 @@ import {
   TrendingUp,
   PanelLeftClose,
   PanelLeftOpen,
-  ClipboardList,
   Link2,
   Archive,
   Tag,
