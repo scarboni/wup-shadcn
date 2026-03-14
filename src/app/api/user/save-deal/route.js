@@ -5,6 +5,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 export async function POST(request) {
   try {
     const session = await auth();

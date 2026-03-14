@@ -1336,7 +1336,7 @@ export function TabStatus({ status }) {
    - 4/4 filled:       full green border, green fill, white number
    Once any progress exists, green takes over regardless of selection.
    ═══════════════════════════════════════════════════ */
-function TabProgressBadge({ tabNumber, progress, isActive }) {
+export function TabProgressBadge({ tabNumber, progress, isActive }) {
   // progress: 0-1 float → quantise to quarters
   const quarter = progress >= 1 ? 4 : progress >= 0.75 ? 3 : progress >= 0.5 ? 2 : progress >= 0.25 ? 1 : 0;
   const hasProgress = quarter > 0;

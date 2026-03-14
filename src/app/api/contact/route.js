@@ -12,6 +12,9 @@ import {
   sendContactNotification,
 } from "@/lib/email";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 // ── Server-side validation ──────────────────────────────────
 
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*\.[a-zA-Z]{2,12}$/;

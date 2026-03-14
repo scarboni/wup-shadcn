@@ -7,6 +7,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");

@@ -6,6 +6,9 @@
 
 import { NextResponse } from "next/server";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
 const RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 const MIN_SCORE = 0.5;

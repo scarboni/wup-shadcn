@@ -2,22 +2,32 @@
 // Prisma Client — Singleton for Next.js (Prisma 7)
 // Prevents multiple instances in development due to hot reload
 // Uses PrismaPg driver adapter (required in Prisma 7)
+//
+// Build-safe: returns null when DATABASE_URL is missing
+// (e.g. during Vercel static page collection). API routes
+// must guard with `if (!db) return NextResponse.json(...)`.
 // ─────────────────────────────────────────────────────────────
-
-import { PrismaClient } from "@/generated/prisma";
 
 const globalForPrisma = globalThis;
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    console.warn("DATABASE_URL not set — Prisma client will not connect to a database.");
-    return new PrismaClient();
+    console.warn("DATABASE_URL not set — Prisma client will not be created.");
+    return null;
+  }
+
+  // Dynamic import so the module doesn't crash at import time
+  // if Prisma generated client isn't available yet
+  let PrismaClient;
+  try {
+    PrismaClient = require("@/generated/prisma").PrismaClient;
+  } catch {
+    console.warn("Prisma client not generated yet — skipping.");
+    return null;
   }
 
   try {
-    // Dynamic import avoids crashing if pg/adapter isn't available
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PrismaPg } = require("@prisma/adapter-pg");
     const adapter = new PrismaPg({ connectionString });
     return new PrismaClient({
@@ -28,21 +38,25 @@ function createPrismaClient() {
           : ["error"],
     });
   } catch (err) {
-    // Database not available — return client without adapter
-    // Queries will fail but import won't crash
-    console.warn("Could not connect to database:", err.message);
-    return new PrismaClient({
-      log:
-        process.env.NODE_ENV === "development"
-          ? ["error", "warn"]
-          : ["error"],
-    });
+    // Adapter not available — try without (Prisma < 7 fallback)
+    console.warn("Could not create PrismaPg adapter:", err.message);
+    try {
+      return new PrismaClient({
+        log:
+          process.env.NODE_ENV === "development"
+            ? ["error", "warn"]
+            : ["error"],
+      });
+    } catch {
+      console.warn("Could not create PrismaClient at all — returning null.");
+      return null;
+    }
   }
 }
 
-/** @type {PrismaClient} */
+/** @type {import("@/generated/prisma").PrismaClient | null} */
 export const db = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== "production" && db) {
   globalForPrisma.prisma = db;
 }

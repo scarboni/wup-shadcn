@@ -41,6 +41,8 @@ const credentialsProvider = Credentials({
 
     const identity = credentials.identity.toLowerCase().trim();
 
+    if (!db) return null;
+
     // Look up user by email or username
     const user = await db.user.findFirst({
       where: {
@@ -93,7 +95,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
 
   // C5 fix: Prisma adapter persists users, accounts, sessions to database
-  adapter: PrismaAdapter(db),
+  // db may be null during Vercel build (no DATABASE_URL) — skip adapter
+  ...(db ? { adapter: PrismaAdapter(db) } : {}),
 
   // Merge providers: OAuth from config + Credentials (Node.js only)
   providers: [...authConfig.providers, credentialsProvider],

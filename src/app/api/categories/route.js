@@ -6,6 +6,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { CATEGORY_TREE } from "@/lib/categories";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
   try {
     const categories = await db.category.findMany();

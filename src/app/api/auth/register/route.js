@@ -10,6 +10,9 @@ import { db } from "@/lib/db";
 import { registerLimiter, getClientIp, rateLimitHeaders } from "@/lib/rate-limit";
 import { randomBytes } from "crypto";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 // ── Validation helpers (mirror client-side rules) ───────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

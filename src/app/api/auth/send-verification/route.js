@@ -9,6 +9,9 @@ import { db } from "@/lib/db";
 import { verifyLimiter, getClientIp, rateLimitHeaders } from "@/lib/rate-limit";
 import { randomBytes } from "crypto";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 export async function POST(request) {
   const ip = getClientIp(request);
 

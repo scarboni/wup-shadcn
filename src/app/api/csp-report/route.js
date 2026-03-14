@@ -6,6 +6,9 @@
 
 import { NextResponse } from "next/server";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 export async function POST(request) {
   try {
     const report = await request.json();

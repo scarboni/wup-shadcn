@@ -8,6 +8,9 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { checkLimiter, getClientIp, rateLimitHeaders } from "@/lib/rate-limit";
 
+// Force dynamic — prevent static pre-rendering during build
+export const dynamic = "force-dynamic";
+
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
 const RESERVED_USERNAMES = new Set([
   "admin", "administrator", "root", "test", "user", "demo", "support",
