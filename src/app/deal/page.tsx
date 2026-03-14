@@ -1,5 +1,6 @@
 // C16: Auth gating handled by middleware (edge-safe)
 // Server-side auth() check deferred until database is connected
+import { Suspense } from "react";
 import Phase from "@/components/phases/deal";
 
 // 🔧 PRODUCTION SEO — Replace static metadata with generateMetadata():
@@ -39,5 +40,5 @@ export default function SingleDealPage() {
   // import { auth } from "@/auth";
   // const session = await auth();
   // if (!session) redirect("/register?callbackUrl=/deal");
-  return <Phase />;
+  return <Suspense><Phase /></Suspense>;
 }
